@@ -8,3 +8,12 @@
   --color-input-bg: #1e2430;
   --navbar-height: 60px;
 }
+
+[data-theme="light"] {
+  --color-bg-dark: #f8fafc;
+  --color-navbar-bg: #ffffff;
+  --color-navbar-border: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-muted: #64748b;
+  --color-input-bg: #f1f5f9;
+}
