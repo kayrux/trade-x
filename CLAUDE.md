@@ -128,3 +128,7 @@ Complete each phase before starting the next.
 - Symbol list: `GET /stock/symbol?exchange=US` — sync daily
 - Quote: `GET /quote?symbol=AAPL` — sync every few minutes
 - Personal use only — no redistribution or commercial use; data must be deleted if subscription ends
+
+## Restrictions
+
+- You are not allowed to access .env files

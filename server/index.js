@@ -1,0 +1,18 @@
+require('dotenv').config();
+const express = require('express');
+const cron = require('node-cron');
+const syncSymbols = require('./src/jobs/syncSymbols');
+const symbolsRouter = require('./src/routes/symbols');
+
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+app.use(express.json());
+
+app.use('/symbols', symbolsRouter);
+
+// Sync symbols once at startup, then daily at midnight
+syncSymbols();
+cron.schedule('0 0 * * *', syncSymbols);
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
