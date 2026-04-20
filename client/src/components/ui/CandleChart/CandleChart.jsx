@@ -70,7 +70,11 @@ function CandleChart({ candles, resolution, loading, error }) {
 
   // Update data when candles change
   useEffect(() => {
-    if (!seriesRef.current || !candles.length) return;
+    if (!seriesRef.current) return;
+    if (!candles.length) {
+      seriesRef.current.setData([]);
+      return;
+    }
 
     const data = candles.map((c) => ({
       time: toChartTime(c.ts, resolution),

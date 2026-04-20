@@ -21,6 +21,7 @@
   justify-content: center;
   background: var(--color-navbar-bg);
   border-radius: 12px;
+  z-index: 1;
 }
 
 .candle-chart__overlay--error {

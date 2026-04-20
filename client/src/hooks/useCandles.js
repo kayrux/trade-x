@@ -26,14 +26,17 @@ export function useCandles(symbol, resolution) {
         const data = await fetchCandles(symbol, resolution);
         if (cancelled) return;
         setCandles(data.candles);
-        // First-ever view: backend sync in progress, retry once after 3s
         if (!isRetry && data.candles.length === 0) {
+          // Backend sync in progress — retry after 3s, keep spinner visible
           retryRef.current = setTimeout(() => load(true), 3000);
+        } else {
+          setLoading(false);
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load candles');
-      } finally {
-        if (!cancelled && !isRetry) setLoading(false);
+        if (!cancelled) {
+          setError(err.message || 'Failed to load candles');
+          setLoading(false);
+        }
       }
     }
 
