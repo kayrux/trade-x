@@ -1,0 +1,19 @@
+.symbol-chart {
+  width: 100%;
+  max-width: 960px;
+}
+
+.symbol-chart__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.symbol-chart__title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
