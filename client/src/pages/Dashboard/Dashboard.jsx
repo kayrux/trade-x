@@ -11,8 +11,8 @@ function DashboardContent() {
     <div className="dashboard">
       {selectedSymbol ? (
         <div className="dashboard__content">
-          <SymbolDetail symbol={selectedSymbol.symbol} />
           <SymbolChart symbol={selectedSymbol.symbol} />
+          <SymbolDetail symbol={selectedSymbol.symbol} />
         </div>
       ) : (
         <p className="dashboard__prompt">Search for a symbol above to see quote details.</p>

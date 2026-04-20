@@ -1,19 +1,39 @@
 .symbol-chart {
-  width: 100%;
-  max-width: 960px;
+  flex: 1;
+  min-width: 0;
 }
 
-.symbol-chart__header {
+.symbol-chart__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  margin-top: 12px;
+  justify-content: end;
 }
 
-.symbol-chart__title {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-text-muted);
+.symbol-chart__identity {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 6px;
 }
+
+.symbol-chart__ticker {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.symbol-chart__name {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.symbol-chart__price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-left: auto;
+}
+

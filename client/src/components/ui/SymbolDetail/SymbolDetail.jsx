@@ -60,30 +60,14 @@ function SymbolDetail({ symbol }) {
 
   return (
     <div className="symbol-detail">
-      <div className="symbol-detail__header">
-        <div className="symbol-detail__identity">
-          <span className="symbol-detail__ticker">{quote.symbol}</span>
-          <span className="symbol-detail__name">{quote.name}</span>
-        </div>
-        {quote.exchange && (
-          <span className="symbol-detail__exchange">{getMicName(quote.exchange)}</span>
-        )}
-      </div>
-
-      <div className="symbol-detail__price-row">
-        <span className={`symbol-detail__price${hasPrice ? '' : ' symbol-detail__price--empty'}`}>
-          {hasPrice ? `$${price.toFixed(2)}` : '—'}
-        </span>
-        {!hasPrice && (
-          <span className="symbol-detail__no-data">No quote data available yet</span>
-        )}
-      </div>
-
+      <p className="symbol-detail__heading">Market Details</p>
       <div className="symbol-detail__stats">
         <StatCell label="Open" value={formatPrice(quote.open)} />
         <StatCell label="High" value={formatPrice(quote.high)} />
         <StatCell label="Low" value={formatPrice(quote.low)} />
         <StatCell label="Volume" value={formatVolume(quote.volume)} />
+        <StatCell label="Last Sale" value={hasPrice ? `$${price.toFixed(2)}` : '—'} />
+        <StatCell label="Exchange" value={quote.exchange ? getMicName(quote.exchange) : '—'} />
       </div>
 
       {syncedLabel && (
