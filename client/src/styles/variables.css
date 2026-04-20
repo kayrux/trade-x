@@ -2,7 +2,7 @@
   --color-bg-dark: #0f1117;
   --color-navbar-bg: #13171f;
   --color-navbar-border: #1e2430;
-  --color-accent: #3b82f6;
+  --color-accent: #94a3b8;
   --color-text-primary: #e2e8f0;
   --color-text-muted: #64748b;
   --color-input-bg: #1e2430;
@@ -16,4 +16,5 @@
   --color-text-primary: #0f172a;
   --color-text-muted: #64748b;
   --color-input-bg: #f1f5f9;
+  --color-accent: #64748b;
 }
