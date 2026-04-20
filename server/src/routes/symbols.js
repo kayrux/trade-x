@@ -27,16 +27,25 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /symbols/:symbol — exact match with quote data
+// GET /symbols/:symbol — exact match with quote data, falls back to latest daily candle
 router.get('/:symbol', async (req, res) => {
   const symbol = req.params.symbol.toUpperCase().trim();
 
   try {
     const { rows } = await pool.query(
       `SELECT s.id, s.symbol, s.name, s.exchange,
-              q.last_price, q.open, q.high, q.low, q.volume, q.synced_at
+              q.last_price, q.open, q.high, q.low, q.volume, q.synced_at,
+              c.close AS candle_close, c.open AS candle_open, c.high AS candle_high,
+              c.low AS candle_low, c.volume AS candle_volume, c.ts AS candle_ts
        FROM symbols s
        LEFT JOIN symbol_quotes q ON q.symbol_id = s.id
+       LEFT JOIN LATERAL (
+         SELECT close, open, high, low, volume, ts
+         FROM symbol_candles
+         WHERE symbol_id = s.id AND resolution = 'daily'
+         ORDER BY ts DESC
+         LIMIT 1
+       ) c ON TRUE
        WHERE s.symbol = $1`,
       [symbol]
     );
@@ -50,7 +59,23 @@ router.get('/:symbol', async (req, res) => {
       refreshQuote(row.id).catch(() => {});
     }
 
-    res.json(row);
+    // Finnhub returns 0 for all fields when market is closed — treat 0 same as null
+    const nz = (val) => (val != null && parseFloat(val) !== 0 ? val : null);
+    const hasLiveQuote = nz(row.last_price) != null;
+
+    res.json({
+      id:           row.id,
+      symbol:       row.symbol,
+      name:         row.name,
+      exchange:     row.exchange,
+      last_price:   nz(row.last_price) ?? row.candle_close,
+      open:         nz(row.open)       ?? row.candle_open,
+      high:         nz(row.high)       ?? row.candle_high,
+      low:          nz(row.low)        ?? row.candle_low,
+      volume:       nz(row.volume)     ?? row.candle_volume,
+      synced_at:    hasLiveQuote ? row.synced_at : row.candle_ts,
+      price_source: hasLiveQuote ? 'live' : (row.candle_close != null ? 'historical' : null),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Database error' });

@@ -10,30 +10,4 @@
   justify-content: end;
 }
 
-.symbol-chart__identity {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  margin-bottom: 6px;
-}
-
-.symbol-chart__ticker {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  letter-spacing: 0.02em;
-}
-
-.symbol-chart__name {
-  font-size: 0.95rem;
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-
-.symbol-chart__price {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-accent);
-  margin-left: auto;
-}
 

@@ -15,8 +15,12 @@ function formatVolume(val) {
   return n.toString();
 }
 
-function formatSyncedAt(synced_at) {
+function formatSyncedLabel(synced_at, price_source) {
   if (!synced_at) return null;
+  if (price_source === 'historical') {
+    const date = new Date(synced_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `Historical close · ${date}`;
+  }
   const diff = Math.floor((Date.now() - new Date(synced_at).getTime()) / 1000);
   if (diff < 60) return 'Updated just now';
   if (diff < 3600) return `Updated ${Math.floor(diff / 60)}m ago`;
@@ -56,7 +60,7 @@ function SymbolDetail({ symbol }) {
 
   const price = parseFloat(quote.last_price);
   const hasPrice = !isNaN(price) && price > 0;
-  const syncedLabel = formatSyncedAt(quote.synced_at);
+  const syncedLabel = formatSyncedLabel(quote.synced_at, quote.price_source);
 
   return (
     <div className="symbol-detail">

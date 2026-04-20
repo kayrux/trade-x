@@ -23,3 +23,27 @@ export const MIC_NAMES = {
 export function getMicName(mic) {
   return MIC_NAMES[mic] ?? mic;
 }
+
+export const MIC_CURRENCY = {
+  XNAS: 'USD',
+  XNYS: 'USD',
+  XASE: 'USD',
+  ARCX: 'USD',
+  XCHI: 'USD',
+  BATS: 'USD',
+  EDGX: 'USD',
+  IEXG: 'USD',
+  OTCM: 'USD',
+  XOTC: 'USD',
+  XPHL: 'USD',
+  XBOS: 'USD',
+  XISE: 'USD',
+  XCBO: 'USD',
+  XNCM: 'USD',
+  XNGS: 'USD',
+  XNMS: 'USD',
+};
+
+export function getMicCurrency(mic) {
+  return MIC_CURRENCY[mic] ?? null;
+}

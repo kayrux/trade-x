@@ -7,8 +7,6 @@
   flex-shrink: 0;
   height: 400px;
   overflow-y: auto;
-  /* offset past chart identity header (1.5rem line-height + 6px margin-bottom) */
-  margin-top: 35px;
   display: flex;
   flex-direction: column;
 }
