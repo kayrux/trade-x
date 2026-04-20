@@ -1,9 +1,17 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const SelectedSymbolContext = createContext(null);
 
 export function SelectedSymbolProvider({ children }) {
-  const [selectedSymbol, setSelectedSymbol] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const ticker = searchParams.get('symbol');
+  const selectedSymbol = ticker ? { symbol: ticker } : null;
+
+  const setSelectedSymbol = useCallback((result) => {
+    setSearchParams(result ? { symbol: result.symbol } : {}, { replace: true });
+  }, [setSearchParams]);
+
   return (
     <SelectedSymbolContext.Provider value={{ selectedSymbol, setSelectedSymbol }}>
       {children}
