@@ -1,12 +1,12 @@
 import "./SymbolSearchResults.css";
 import { getMicName } from "../../../lib/constants";
 
-function SymbolResultItem({ result }) {
+function SymbolResultItem({ result, onSelect }) {
   const price = parseFloat(result.last_price);
   const hasPrice = !isNaN(price) && price > 0;
 
   return (
-    <li className="symbol-results__item">
+    <li className="symbol-results__item" onClick={() => onSelect(result)}>
       <div className="symbol-results__item-left">
         <span className="symbol-results__symbol">{result.symbol}</span>
         <span className="symbol-results__name">{result.name}</span>
@@ -25,7 +25,7 @@ function SymbolResultItem({ result }) {
   );
 }
 
-function SymbolSearchResults({ results, loading, error, visible }) {
+function SymbolSearchResults({ results, loading, error, visible, onSelect }) {
   if (!visible) return null;
 
   return (
@@ -45,7 +45,7 @@ function SymbolSearchResults({ results, loading, error, visible }) {
       )}
       {!loading &&
         !error &&
-        results.map((r) => <SymbolResultItem key={r.id} result={r} />)}
+        results.map((r) => <SymbolResultItem key={r.id} result={r} onSelect={onSelect} />)}
     </ul>
   );
 }

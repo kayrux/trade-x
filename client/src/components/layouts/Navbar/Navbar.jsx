@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Home, User, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
+import { useSelectedSymbol } from '../../../context/SelectedSymbolContext';
 import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
 import SearchBar from '../../forms/SearchBar/SearchBar';
 import SymbolSearchResults from '../../ui/SymbolSearchResults/SymbolSearchResults';
@@ -8,11 +9,18 @@ import './Navbar.css';
 
 function Navbar() {
   const { theme, toggleTheme } = useTheme();
+  const { setSelectedSymbol } = useSelectedSymbol();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
 
   const { results, loading, error } = useSymbolSearch(query);
   const showDropdown = focused && query.trim().length > 0;
+
+  function handleSelect(result) {
+    setSelectedSymbol(result);
+    setQuery('');
+    setFocused(false);
+  }
 
   return (
     <nav className="navbar">
@@ -34,6 +42,7 @@ function Navbar() {
             loading={loading}
             error={error}
             visible={showDropdown}
+            onSelect={handleSelect}
           />
         </div>
       </div>

@@ -1,3 +1,13 @@
 .dashboard {
   width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-top: 40px;
+}
+
+.dashboard__prompt {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 80px;
 }
