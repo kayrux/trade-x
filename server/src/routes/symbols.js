@@ -34,7 +34,7 @@ router.get('/:symbol', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT s.id, s.symbol, s.name, s.exchange,
-              q.last_price, q.open, q.high, q.low, q.volume, q.synced_at,
+              q.last_price, q.open, q.high, q.low, q.volume, q.prev_close, q.synced_at,
               c.close AS candle_close, c.open AS candle_open, c.high AS candle_high,
               c.low AS candle_low, c.volume AS candle_volume, c.ts AS candle_ts
        FROM symbols s
@@ -56,7 +56,18 @@ router.get('/:symbol', async (req, res) => {
     const isStale = !row.synced_at || Date.now() - new Date(row.synced_at).getTime() > QUOTE_STALE_MS;
 
     if (isStale) {
-      refreshQuote(row.id).catch(() => {});
+      try {
+        const fresh = await refreshQuote(row.id);
+        row.last_price  = fresh.last_price;
+        row.open        = fresh.open;
+        row.high        = fresh.high;
+        row.low         = fresh.low;
+        row.volume      = fresh.volume;
+        row.prev_close  = fresh.prev_close;
+        row.synced_at   = fresh.synced_at;
+      } catch (err) {
+        console.error('refreshQuote failed:', err.message);
+      }
     }
 
     // Finnhub returns 0 for all fields when market is closed — treat 0 same as null
@@ -73,6 +84,7 @@ router.get('/:symbol', async (req, res) => {
       high:         nz(row.high)       ?? row.candle_high,
       low:          nz(row.low)        ?? row.candle_low,
       volume:       nz(row.volume)     ?? row.candle_volume,
+      prev_close:   nz(row.prev_close),
       synced_at:    hasLiveQuote ? row.synced_at : row.candle_ts,
       price_source: hasLiveQuote ? 'live' : (row.candle_close != null ? 'historical' : null),
     });
@@ -87,18 +99,22 @@ async function refreshQuote(symbolId) {
     params: { symbol: symbolId, token: process.env.FINNHUB_API_KEY },
   });
 
+  const synced_at = new Date();
   await pool.query(
-    `INSERT INTO symbol_quotes (symbol_id, last_price, open, high, low, volume, synced_at)
-     VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    `INSERT INTO symbol_quotes (symbol_id, last_price, open, high, low, volume, prev_close, synced_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
      ON CONFLICT (symbol_id) DO UPDATE SET
        last_price = EXCLUDED.last_price,
        open       = EXCLUDED.open,
        high       = EXCLUDED.high,
        low        = EXCLUDED.low,
        volume     = EXCLUDED.volume,
+       prev_close = EXCLUDED.prev_close,
        synced_at  = EXCLUDED.synced_at`,
-    [symbolId, data.c, data.o, data.h, data.l, data.v]
+    [symbolId, data.c, data.o, data.h, data.l, data.v, data.pc]
   );
+
+  return { last_price: data.c, open: data.o, high: data.h, low: data.l, volume: data.v, prev_close: data.pc, synced_at };
 }
 
 module.exports = router;

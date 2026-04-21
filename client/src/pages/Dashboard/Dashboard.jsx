@@ -6,8 +6,7 @@ import { useQuote } from '../../hooks/useQuote';
 import { getMicCurrency } from '../../lib/constants';
 import './Dashboard.css';
 
-function SymbolHeading({ symbol }) {
-  const { quote } = useQuote(symbol);
+function SymbolHeading({ quote }) {
   const price = quote ? parseFloat(quote.last_price) : NaN;
   const hasPrice = !isNaN(price) && price > 0;
   const open = quote ? parseFloat(quote.open) : NaN;
@@ -18,6 +17,8 @@ function SymbolHeading({ symbol }) {
   const changeText = hasChange
     ? `${change >= 0 ? '+' : ''}$${Math.abs(change).toFixed(2)} (${change >= 0 ? '+' : ''}${changePct.toFixed(2)}%) today`
     : null;
+
+  const symbol = quote?.symbol;
 
   return (
     <div className="dashboard__heading">
@@ -44,14 +45,15 @@ function SymbolHeading({ symbol }) {
 
 function DashboardContent() {
   const { selectedSymbol } = useSelectedSymbol();
+  const { quote } = useQuote(selectedSymbol?.symbol);
 
   return (
     <div className="dashboard">
       {selectedSymbol ? (
         <div className="dashboard__content">
-          <SymbolHeading symbol={selectedSymbol.symbol} />
+          <SymbolHeading quote={quote} />
           <div className="dashboard__body">
-            <SymbolChart symbol={selectedSymbol.symbol} />
+            <SymbolChart symbol={selectedSymbol.symbol} quote={quote} />
             <SymbolDetail symbol={selectedSymbol.symbol} />
           </div>
         </div>
