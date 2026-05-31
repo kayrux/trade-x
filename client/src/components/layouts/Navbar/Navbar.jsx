@@ -19,7 +19,6 @@ function Navbar() {
   function handleSelect(result) {
     setSelectedSymbol(result);
     setQuery('');
-    setFocused(false);
   }
 
   return (

@@ -6,7 +6,12 @@ function SymbolResultItem({ result, onSelect }) {
   const hasPrice = !isNaN(price) && price > 0;
 
   return (
-    <li className="symbol-results__item" onClick={() => onSelect(result)}>
+    <li
+      className="symbol-results__item"
+      onMouseDown={(e) => e.preventDefault()}
+      onTouchEnd={(e) => { e.preventDefault(); onSelect(result); }}
+      onClick={() => onSelect(result)}
+    >
       <div className="symbol-results__item-left">
         <span className="symbol-results__symbol">{result.symbol}</span>
         <span className="symbol-results__name">{result.name}</span>
