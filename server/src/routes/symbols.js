@@ -6,19 +6,22 @@ const router = express.Router();
 
 const QUOTE_STALE_MS = 5 * 60 * 1000; // 5 minutes
 
-// GET /symbols?q=AAP — prefix search, no quote data
+// GET /symbols?q=AAP — prefix search by ticker or company name, no quote data
 router.get('/', async (req, res) => {
-  const q = (req.query.q || '').toUpperCase().trim();
-  if (!q) return res.json([]);
+  const raw = (req.query.q || '').trim();
+  const q = raw.toUpperCase();
+  if (!raw) return res.json([]);
 
   try {
     const { rows } = await pool.query(
       `SELECT id, symbol, name, exchange
        FROM symbols
-       WHERE symbol LIKE $1
-       ORDER BY symbol
+       WHERE symbol LIKE $1 OR name ILIKE $2
+       ORDER BY
+         CASE WHEN symbol LIKE $1 THEN 0 ELSE 1 END,
+         symbol
        LIMIT 20`,
-      [`${q}%`]
+      [`${q}%`, `${raw}%`]
     );
     res.json(rows);
   } catch (err) {

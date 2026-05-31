@@ -1,6 +1,7 @@
+import { X } from 'lucide-react';
 import './SearchBar.css';
 
-function SearchBar({ value = '', onChange, onFocus, onBlur }) {
+function SearchBar({ value = '', onChange, onFocus, onBlur, onClear }) {
   return (
     <div className="search-bar">
       <input
@@ -13,6 +14,16 @@ function SearchBar({ value = '', onChange, onFocus, onBlur }) {
         onFocus={onFocus}
         onBlur={onBlur}
       />
+      {value && onClear && (
+        <button
+          className="search-bar__clear"
+          onClick={onClear}
+          aria-label="Clear search"
+          tabIndex={-1}
+        >
+          <X size={14} />
+        </button>
+      )}
     </div>
   );
 }

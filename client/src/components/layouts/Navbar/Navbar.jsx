@@ -36,6 +36,7 @@ function Navbar() {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
+            onClear={() => setQuery('')}
           />
           <SymbolSearchResults
             results={results}
