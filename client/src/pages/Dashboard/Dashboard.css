@@ -69,6 +69,13 @@
 .dashboard__change--pos { color: #16a34a; }
 .dashboard__change--neg { color: #dc2626; }
 
+.dashboard__close-label {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
+}
+
 .dashboard__body {
   display: flex;
   flex-direction: row;

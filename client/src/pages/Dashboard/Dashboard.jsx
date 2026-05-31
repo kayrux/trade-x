@@ -1,10 +1,13 @@
-import { SelectedSymbolProvider, useSelectedSymbol } from '../../context/SelectedSymbolContext';
-import PageLayout from '../../components/layouts/PageLayout/PageLayout';
-import SymbolDetail from '../../components/ui/SymbolDetail/SymbolDetail';
-import SymbolChart from '../../components/ui/SymbolChart/SymbolChart';
-import { useQuote } from '../../hooks/useQuote';
-import { getMicCurrency } from '../../lib/constants';
-import './Dashboard.css';
+import {
+  SelectedSymbolProvider,
+  useSelectedSymbol,
+} from "../../context/SelectedSymbolContext";
+import PageLayout from "../../components/layouts/PageLayout/PageLayout";
+import SymbolDetail from "../../components/ui/SymbolDetail/SymbolDetail";
+import SymbolChart from "../../components/ui/SymbolChart/SymbolChart";
+import { useQuote } from "../../hooks/useQuote";
+import { getMicCurrency } from "../../lib/constants";
+import "./Dashboard.css";
 
 function SymbolHeading({ quote }) {
   const price = quote ? parseFloat(quote.last_price) : NaN;
@@ -13,10 +16,29 @@ function SymbolHeading({ quote }) {
   const hasChange = hasPrice && !isNaN(open) && open > 0;
   const change = hasChange ? price - open : 0;
   const changePct = hasChange ? (change / open) * 100 : 0;
-  const changeDir = change >= 0 ? 'pos' : 'neg';
+  const changeDir = change >= 0 ? "pos" : "neg";
   const changeText = hasChange
-    ? `${change >= 0 ? '+' : ''}$${Math.abs(change).toFixed(2)} (${change >= 0 ? '+' : ''}${changePct.toFixed(2)}%) today`
+    ? `${change >= 0 ? "+" : ""}$${Math.abs(change).toFixed(2)} (${change >= 0 ? "+" : ""}${changePct.toFixed(2)}%) ${quote?.price_source !== "historical" || !quote?.synced_at ? "today" : ""}`
     : null;
+
+  const closeLabel = (() => {
+    if (quote?.price_source !== "historical" || !quote?.synced_at) return null;
+    const date = new Date(quote.synced_at);
+    const datePart = new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "America/New_York",
+    }).format(date);
+    const tzAbbr =
+      new Intl.DateTimeFormat("en-US", {
+        timeZoneName: "short",
+        timeZone: "America/New_York",
+      })
+        .formatToParts(date)
+        .find((p) => p.type === "timeZoneName")?.value ?? "ET";
+    return `At close: ${datePart} at 4:00 PM ${tzAbbr}`;
+  })();
 
   const symbol = quote?.symbol;
 
@@ -31,13 +53,22 @@ function SymbolHeading({ quote }) {
           <span className="dashboard__price">
             ${price.toFixed(2)}
             {quote?.exchange && getMicCurrency(quote.exchange) && (
-              <span className="dashboard__currency">{getMicCurrency(quote.exchange)}</span>
+              <span className="dashboard__currency">
+                {getMicCurrency(quote.exchange)}
+              </span>
             )}
           </span>
           {changeText && (
-            <span className={`dashboard__change dashboard__change--${changeDir}`}>{changeText}</span>
+            <span
+              className={`dashboard__change dashboard__change--${changeDir}`}
+            >
+              {changeText}
+            </span>
           )}
         </div>
+      )}
+      {closeLabel && (
+        <span className="dashboard__close-label">{closeLabel}</span>
       )}
     </div>
   );
@@ -46,6 +77,7 @@ function SymbolHeading({ quote }) {
 function DashboardContent() {
   const { selectedSymbol } = useSelectedSymbol();
   const { quote } = useQuote(selectedSymbol?.symbol);
+  console.log("quote", quote);
 
   return (
     <div className="dashboard">
@@ -58,7 +90,9 @@ function DashboardContent() {
           </div>
         </div>
       ) : (
-        <p className="dashboard__prompt">Search for a symbol above to see quote details.</p>
+        <p className="dashboard__prompt">
+          Search for a symbol above to see quote details.
+        </p>
       )}
     </div>
   );

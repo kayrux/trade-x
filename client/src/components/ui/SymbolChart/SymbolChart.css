@@ -1,6 +1,7 @@
 .symbol-chart {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .symbol-chart__footer {
