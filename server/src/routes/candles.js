@@ -1,5 +1,7 @@
 const express = require('express');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const pool = require('../db');
 
 const router = express.Router();
@@ -60,7 +62,12 @@ router.get('/:symbol', async (req, res) => {
     query += ' ORDER BY ts ASC';
 
     const { rows } = await pool.query(query, params);
-    res.json({ symbol, resolution, candles: rows });
+    const payload = { symbol, resolution, candles: rows };
+    fs.writeFileSync(
+      path.join(__dirname, '..', '..', '..', 'debugging-logs', 'candles-debug.json'),
+      JSON.stringify(payload, null, 2)
+    );
+    res.json(payload);
   } catch (err) {
     console.error('candles route error:', err.message);
     res.status(500).json({ error: 'Server error' });
