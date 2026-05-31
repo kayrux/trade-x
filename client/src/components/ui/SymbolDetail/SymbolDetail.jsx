@@ -15,6 +15,26 @@ function formatVolume(val) {
   return n.toString();
 }
 
+function formatMarketCap(val) {
+  const n = parseFloat(val); // value is in millions USD
+  if (isNaN(n) || n === 0) return '—';
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}T`;
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(2)}B`;
+  return `$${n.toFixed(0)}M`;
+}
+
+function formatShares(val) {
+  const n = parseFloat(val); // value is in millions
+  if (isNaN(n) || n === 0) return '—';
+  if (n >= 1_000) return `${(n / 1_000).toFixed(2)}B`;
+  return `${n.toFixed(0)}M`;
+}
+
+function formatBeta(val) {
+  const n = parseFloat(val);
+  return isNaN(n) ? '—' : n.toFixed(2);
+}
+
 function formatSyncedLabel(synced_at, price_source) {
   if (!synced_at) return null;
   if (price_source === 'historical') {
@@ -69,12 +89,18 @@ function SymbolDetail({ symbol }) {
     <div className="symbol-detail">
       <p className="symbol-detail__heading">Market Details</p>
       <div className="symbol-detail__stats">
-        <StatCell label="Open"      value={formatPrice(quote.open)}                    skeleton={priceLoading} />
-        <StatCell label="High"      value={formatPrice(quote.high)}                    skeleton={priceLoading} />
-        <StatCell label="Low"       value={formatPrice(quote.low)}                     skeleton={priceLoading} />
-        <StatCell label="Volume"    value={formatVolume(quote.volume)}                 skeleton={priceLoading} />
-        <StatCell label="Last Sale" value={hasPrice ? `$${price.toFixed(2)}` : '—'}   skeleton={priceLoading} />
-        <StatCell label="Exchange"  value={quote.exchange ? getMicName(quote.exchange) : '—'} />
+        <StatCell label="Open"        value={formatPrice(quote.open)}                         skeleton={priceLoading} />
+        <StatCell label="High"        value={formatPrice(quote.high)}                         skeleton={priceLoading} />
+        <StatCell label="Low"         value={formatPrice(quote.low)}                          skeleton={priceLoading} />
+        <StatCell label="Volume"      value={formatVolume(quote.volume)}                      skeleton={priceLoading} />
+        <StatCell label="Last Sale"   value={hasPrice ? `$${price.toFixed(2)}` : '—'}        skeleton={priceLoading} />
+        <StatCell label="Exchange"    value={quote.exchange ? getMicName(quote.exchange) : '—'} />
+        <StatCell label="Market Cap"  value={formatMarketCap(quote.market_cap)} />
+        <StatCell label="52-Wk High"  value={formatPrice(quote.week52_high)} />
+        <StatCell label="52-Wk Low"   value={formatPrice(quote.week52_low)} />
+        <StatCell label="Beta"        value={formatBeta(quote.beta)} />
+        <StatCell label="Industry"    value={quote.industry ?? '—'} />
+        <StatCell label="Shares Out." value={formatShares(quote.shares_outstanding)} />
       </div>
 
       {syncedLabel && (
