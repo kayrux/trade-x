@@ -1,15 +1,15 @@
-const express = require('express');
-const axios = require('axios');
-const pool = require('../db');
+const express = require("express");
+const axios = require("axios");
+const pool = require("../db");
 
 const router = express.Router();
 
-const QUOTE_STALE_MS = 5 * 60 * 1000;     // 5 minutes
+const QUOTE_STALE_MS = 5 * 60 * 1000; // 5 minutes
 const PROFILE_STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // GET /symbols?q=AAP — prefix search by ticker or company name, no quote data
-router.get('/', async (req, res) => {
-  const raw = (req.query.q || '').trim();
+router.get("/", async (req, res) => {
+  const raw = (req.query.q || "").trim();
   const q = raw.toUpperCase();
   if (!raw) return res.json([]);
 
@@ -22,17 +22,17 @@ router.get('/', async (req, res) => {
          CASE WHEN symbol LIKE $1 THEN 0 ELSE 1 END,
          symbol
        LIMIT 20`,
-      [`${q}%`, `${raw}%`]
+      [`${q}%`, `${raw}%`],
     );
     res.json(rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: "Database error" });
   }
 });
 
 // GET /symbols/:symbol — exact match with quote data, falls back to latest daily candle
-router.get('/:symbol', async (req, res) => {
+router.get("/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase().trim();
 
   try {
@@ -54,30 +54,34 @@ router.get('/:symbol', async (req, res) => {
          LIMIT 1
        ) c ON TRUE
        WHERE s.symbol = $1`,
-      [symbol]
+      [symbol],
     );
 
-    if (rows.length === 0) return res.status(404).json({ error: 'Symbol not found' });
+    if (rows.length === 0)
+      return res.status(404).json({ error: "Symbol not found" });
 
     const row = rows[0];
-    const isStale = !row.synced_at || Date.now() - new Date(row.synced_at).getTime() > QUOTE_STALE_MS;
+    const isStale =
+      !row.synced_at ||
+      Date.now() - new Date(row.synced_at).getTime() > QUOTE_STALE_MS;
 
     if (isStale) {
       try {
         const fresh = await refreshQuote(row.id);
-        row.last_price  = fresh.last_price;
-        row.open        = fresh.open;
-        row.high        = fresh.high;
-        row.low         = fresh.low;
-        row.volume      = fresh.volume;
-        row.prev_close  = fresh.prev_close;
-        row.synced_at   = fresh.synced_at;
+        row.last_price = fresh.last_price;
+        row.open = fresh.open;
+        row.high = fresh.high;
+        row.low = fresh.low;
+        row.volume = fresh.volume;
+        row.prev_close = fresh.prev_close;
+        row.synced_at = fresh.synced_at;
       } catch (err) {
-        console.error('refreshQuote failed:', err.message);
+        console.error("refreshQuote failed:", err.message);
       }
     }
 
-    const profileStale = !row.profile_synced_at ||
+    const profileStale =
+      !row.profile_synced_at ||
       Date.now() - new Date(row.profile_synced_at).getTime() > PROFILE_STALE_MS;
 
     if (profileStale) {
@@ -85,7 +89,7 @@ router.get('/:symbol', async (req, res) => {
         const freshProfile = await refreshProfile(row.id, row.symbol);
         Object.assign(row, freshProfile);
       } catch (err) {
-        console.error('refreshProfile failed:', err.message);
+        console.error("refreshProfile failed:", err.message);
       }
     }
 
@@ -94,35 +98,39 @@ router.get('/:symbol', async (req, res) => {
     const hasLiveQuote = nz(row.last_price) != null;
 
     res.json({
-      id:                row.id,
-      symbol:            row.symbol,
-      name:              row.name,
-      exchange:          row.exchange,
-      last_price:        nz(row.last_price) ?? row.candle_close,
-      open:              nz(row.open)       ?? row.candle_open,
-      high:              nz(row.high)       ?? row.candle_high,
-      low:               nz(row.low)        ?? row.candle_low,
-      volume:            nz(row.volume)     ?? row.candle_volume,
-      prev_close:        nz(row.prev_close),
-      synced_at:         hasLiveQuote ? row.synced_at : row.candle_ts,
-      price_source:      hasLiveQuote ? 'live' : (row.candle_close != null ? 'historical' : null),
-      market_cap:        row.market_cap        ?? null,
-      industry:          row.industry          ?? null,
+      id: row.id,
+      symbol: row.symbol,
+      name: row.name,
+      exchange: row.exchange,
+      last_price: nz(row.last_price) ?? row.candle_close,
+      open: nz(row.open) ?? row.candle_open,
+      high: nz(row.high) ?? row.candle_high,
+      low: nz(row.low) ?? row.candle_low,
+      volume: nz(row.volume) ?? row.candle_volume,
+      prev_close: nz(row.prev_close),
+      synced_at: hasLiveQuote ? row.synced_at : row.candle_ts,
+      price_source: hasLiveQuote
+        ? "live"
+        : row.candle_close != null
+          ? "historical"
+          : null,
+      market_cap: row.market_cap ?? null,
+      industry: row.industry ?? null,
       shares_outstanding: row.shares_outstanding ?? null,
-      ipo_date:          row.ipo_date          ?? null,
-      weburl:            row.weburl            ?? null,
-      week52_high:       row.week52_high       ?? null,
-      week52_low:        row.week52_low        ?? null,
-      beta:              row.beta              ?? null,
+      ipo_date: row.ipo_date ?? null,
+      weburl: row.weburl ?? null,
+      week52_high: row.week52_high ?? null,
+      week52_low: row.week52_low ?? null,
+      beta: row.beta ?? null,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: "Database error" });
   }
 });
 
 async function refreshQuote(symbolId) {
-  const { data } = await axios.get('https://finnhub.io/api/v1/quote', {
+  const { data } = await axios.get("https://finnhub.io/api/v1/quote", {
     params: { symbol: symbolId, token: process.env.FINNHUB_API_KEY },
   });
 
@@ -138,36 +146,46 @@ async function refreshQuote(symbolId) {
        volume     = EXCLUDED.volume,
        prev_close = EXCLUDED.prev_close,
        synced_at  = EXCLUDED.synced_at`,
-    [symbolId, data.c, data.o, data.h, data.l, data.v, data.pc]
+    [symbolId, data.c, data.o, data.h, data.l, data.v, data.pc],
   );
 
-  return { last_price: data.c, open: data.o, high: data.h, low: data.l, volume: data.v, prev_close: data.pc, synced_at };
+  return {
+    last_price: data.c,
+    open: data.o,
+    high: data.h,
+    low: data.l,
+    volume: data.v,
+    prev_close: data.pc,
+    synced_at,
+  };
 }
 
 async function refreshProfile(symbolId, ticker) {
   const [profileRes, metricRes] = await Promise.all([
-    axios.get('https://finnhub.io/api/v1/stock/profile2', {
+    axios.get("https://finnhub.io/api/v1/stock/profile2", {
       params: { symbol: ticker, token: process.env.FINNHUB_API_KEY },
     }),
-    axios.get('https://finnhub.io/api/v1/stock/metric', {
-      params: { symbol: ticker, metric: 'all', token: process.env.FINNHUB_API_KEY },
+    axios.get("https://finnhub.io/api/v1/stock/metric", {
+      params: {
+        symbol: ticker,
+        metric: "all",
+        token: process.env.FINNHUB_API_KEY,
+      },
     }),
   ]);
 
   const p = profileRes.data;
   const m = metricRes.data?.metric ?? {};
-  console.log('[profile2]', ticker, JSON.stringify(p).slice(0, 120));
-  console.log('[metric]',   ticker, JSON.stringify(m).slice(0, 120));
 
   const profile = {
-    market_cap:         p.marketCapitalization ?? null,
-    industry:           p.finnhubIndustry      ?? null,
-    shares_outstanding: p.shareOutstanding     ?? null,
-    ipo_date:           p.ipo                  ?? null,
-    weburl:             p.weburl               ?? null,
-    week52_high:        m['52WeekHigh']        ?? null,
-    week52_low:         m['52WeekLow']         ?? null,
-    beta:               m.beta                 ?? null,
+    market_cap: p.marketCapitalization ?? null,
+    industry: p.finnhubIndustry ?? null,
+    shares_outstanding: p.shareOutstanding ?? null,
+    ipo_date: p.ipo ?? null,
+    weburl: p.weburl ?? null,
+    week52_high: m["52WeekHigh"] ?? null,
+    week52_low: m["52WeekLow"] ?? null,
+    beta: m.beta ?? null,
   };
 
   await pool.query(
@@ -184,8 +202,17 @@ async function refreshProfile(symbolId, ticker) {
        week52_low         = EXCLUDED.week52_low,
        beta               = EXCLUDED.beta,
        synced_at          = EXCLUDED.synced_at`,
-    [symbolId, profile.market_cap, profile.industry, profile.shares_outstanding,
-     profile.ipo_date, profile.weburl, profile.week52_high, profile.week52_low, profile.beta]
+    [
+      symbolId,
+      profile.market_cap,
+      profile.industry,
+      profile.shares_outstanding,
+      profile.ipo_date,
+      profile.weburl,
+      profile.week52_high,
+      profile.week52_low,
+      profile.beta,
+    ],
   );
 
   return profile;
