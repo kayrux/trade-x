@@ -12,7 +12,7 @@ function SymbolChart({ symbol, quote }) {
   const { candles, loading, error } = useCandles(symbol, resolution);
 
   const candlesWithToday = useMemo(() => {
-    if (!candles.length || !quote) return candles;
+    if (!candles.length || !quote || quote.symbol !== symbol) return candles;
 
     const todayStr = new Date().toISOString().split('T')[0];
     const lastDate = new Date(candles[candles.length - 1].ts).toISOString().split('T')[0];
@@ -42,7 +42,7 @@ function SymbolChart({ symbol, quote }) {
     }
 
     return candles;
-  }, [candles, quote]);
+  }, [candles, quote, symbol]);
 
   return (
     <div className="symbol-chart">

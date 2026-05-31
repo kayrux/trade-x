@@ -9,9 +9,10 @@ import { useQuote } from "../../hooks/useQuote";
 import { getMicCurrency } from "../../lib/constants";
 import "./Dashboard.css";
 
-function SymbolHeading({ quote }) {
+function SymbolHeading({ symbol, quote, loading }) {
   const price = quote ? parseFloat(quote.last_price) : NaN;
   const hasPrice = !isNaN(price) && price > 0;
+  const showPriceSkeleton = !hasPrice && (loading || quote?.price_source === null);
   const open = quote ? parseFloat(quote.open) : NaN;
   const hasChange = hasPrice && !isNaN(open) && open > 0;
   const change = hasChange ? price - open : 0;
@@ -40,15 +41,13 @@ function SymbolHeading({ quote }) {
     return `At close: ${datePart} at 4:00 PM ${tzAbbr}`;
   })();
 
-  const symbol = quote?.symbol;
-
   return (
     <div className="dashboard__heading">
       <div className="dashboard__heading-row">
         <span className="dashboard__ticker">{symbol}</span>
         {quote?.name && <span className="dashboard__name">{quote.name}</span>}
       </div>
-      {hasPrice && (
+      {hasPrice ? (
         <div className="dashboard__price-row">
           <span className="dashboard__price">
             ${price.toFixed(2)}
@@ -66,7 +65,12 @@ function SymbolHeading({ quote }) {
             </span>
           )}
         </div>
-      )}
+      ) : showPriceSkeleton ? (
+        <div className="dashboard__price-skeleton-row">
+          <div className="dashboard__price-skeleton" />
+          <div className="dashboard__change-skeleton" />
+        </div>
+      ) : null}
       {closeLabel && (
         <span className="dashboard__close-label">{closeLabel}</span>
       )}
@@ -76,14 +80,13 @@ function SymbolHeading({ quote }) {
 
 function DashboardContent() {
   const { selectedSymbol } = useSelectedSymbol();
-  const { quote } = useQuote(selectedSymbol?.symbol);
-  console.log("quote", quote);
+  const { quote, loading } = useQuote(selectedSymbol?.symbol);
 
   return (
     <div className="dashboard">
       {selectedSymbol ? (
         <div className="dashboard__content">
-          <SymbolHeading quote={quote} />
+          <SymbolHeading symbol={selectedSymbol.symbol} quote={quote} loading={loading} />
           <div className="dashboard__body">
             <SymbolChart symbol={selectedSymbol.symbol} quote={quote} />
             <SymbolDetail symbol={selectedSymbol.symbol} />

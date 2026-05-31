@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchCandles } from '../lib/api/candles';
 
+const MAX_RETRIES = 10;
+
 export function useCandles(symbol, resolution) {
   const [candles, setCandles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const retryRef = useRef(null);
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
     if (retryRef.current) clearTimeout(retryRef.current);
+    retryCountRef.current = 0;
     setCandles([]);
 
     if (!symbol) {
@@ -26,8 +30,9 @@ export function useCandles(symbol, resolution) {
         const data = await fetchCandles(symbol, resolution);
         if (cancelled) return;
         setCandles(data.candles);
-        if (!isRetry && data.candles.length === 0) {
-          // Backend sync in progress — retry after 3s, keep spinner visible
+        if (data.candles.length === 0 && retryCountRef.current < MAX_RETRIES) {
+          // Backend sync in progress — keep retrying, keep spinner visible
+          retryCountRef.current++;
           retryRef.current = setTimeout(() => load(true), 3000);
         } else {
           setLoading(false);

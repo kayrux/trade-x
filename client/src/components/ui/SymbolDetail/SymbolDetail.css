@@ -82,6 +82,22 @@
   color: var(--color-text-primary);
 }
 
+/* Skeleton */
+@keyframes detail-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.symbol-detail__stat-skeleton {
+  width: 56px;
+  height: 12px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--color-navbar-border) 25%, var(--color-text-muted) 50%, var(--color-navbar-border) 75%);
+  background-size: 200% 100%;
+  animation: detail-shimmer 1.4s ease-in-out infinite;
+  opacity: 0.45;
+}
+
 /* Footer */
 .symbol-detail__synced {
   margin: 14px 0 0;

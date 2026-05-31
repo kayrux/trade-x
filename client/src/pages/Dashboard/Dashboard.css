@@ -90,6 +90,37 @@
   }
 }
 
+@keyframes dashboard-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.dashboard__price-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard__price-skeleton {
+  width: 120px;
+  height: 34px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-navbar-border) 25%, var(--color-text-muted) 50%, var(--color-navbar-border) 75%);
+  background-size: 200% 100%;
+  animation: dashboard-shimmer 1.4s ease-in-out infinite;
+  opacity: 0.45;
+}
+
+.dashboard__change-skeleton {
+  width: 90px;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-navbar-border) 25%, var(--color-text-muted) 50%, var(--color-navbar-border) 75%);
+  background-size: 200% 100%;
+  animation: dashboard-shimmer 1.4s ease-in-out infinite;
+  opacity: 0.45;
+}
+
 .dashboard__prompt {
   color: var(--color-text-muted);
   font-size: 0.9rem;

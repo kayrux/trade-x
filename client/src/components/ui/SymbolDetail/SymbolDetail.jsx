@@ -27,11 +27,13 @@ function formatSyncedLabel(synced_at, price_source) {
   return `Updated ${Math.floor(diff / 3600)}h ago`;
 }
 
-function StatCell({ label, value }) {
+function StatCell({ label, value, skeleton }) {
   return (
     <div className="symbol-detail__stat">
       <span className="symbol-detail__stat-label">{label}</span>
-      <span className="symbol-detail__stat-value">{value}</span>
+      {skeleton
+        ? <div className="symbol-detail__stat-skeleton" />
+        : <span className="symbol-detail__stat-value">{value}</span>}
     </div>
   );
 }
@@ -61,17 +63,18 @@ function SymbolDetail({ symbol }) {
   const price = parseFloat(quote.last_price);
   const hasPrice = !isNaN(price) && price > 0;
   const syncedLabel = formatSyncedLabel(quote.synced_at, quote.price_source);
+  const priceLoading = quote.price_source === null;
 
   return (
     <div className="symbol-detail">
       <p className="symbol-detail__heading">Market Details</p>
       <div className="symbol-detail__stats">
-        <StatCell label="Open" value={formatPrice(quote.open)} />
-        <StatCell label="High" value={formatPrice(quote.high)} />
-        <StatCell label="Low" value={formatPrice(quote.low)} />
-        <StatCell label="Volume" value={formatVolume(quote.volume)} />
-        <StatCell label="Last Sale" value={hasPrice ? `$${price.toFixed(2)}` : '—'} />
-        <StatCell label="Exchange" value={quote.exchange ? getMicName(quote.exchange) : '—'} />
+        <StatCell label="Open"      value={formatPrice(quote.open)}                    skeleton={priceLoading} />
+        <StatCell label="High"      value={formatPrice(quote.high)}                    skeleton={priceLoading} />
+        <StatCell label="Low"       value={formatPrice(quote.low)}                     skeleton={priceLoading} />
+        <StatCell label="Volume"    value={formatVolume(quote.volume)}                 skeleton={priceLoading} />
+        <StatCell label="Last Sale" value={hasPrice ? `$${price.toFixed(2)}` : '—'}   skeleton={priceLoading} />
+        <StatCell label="Exchange"  value={quote.exchange ? getMicName(quote.exchange) : '—'} />
       </div>
 
       {syncedLabel && (
