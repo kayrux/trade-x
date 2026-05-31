@@ -5,7 +5,6 @@
   padding: 20px 24px;
   width: 320px;
   flex-shrink: 0;
-  height: 480px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;

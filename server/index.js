@@ -5,6 +5,7 @@ const cron = require('node-cron');
 const syncSymbols = require('./src/jobs/syncSymbols');
 const symbolsRouter = require('./src/routes/symbols');
 const candlesRouter = require('./src/routes/candles');
+const newsRouter = require('./src/routes/news');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use('/symbols', symbolsRouter);
 app.use('/candles', candlesRouter);
+app.use('/news', newsRouter);
 
 // Sync symbols once at startup, then daily at midnight
 syncSymbols();

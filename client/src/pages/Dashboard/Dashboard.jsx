@@ -5,6 +5,7 @@ import {
 import PageLayout from "../../components/layouts/PageLayout/PageLayout";
 import SymbolDetail from "../../components/ui/SymbolDetail/SymbolDetail";
 import SymbolChart from "../../components/ui/SymbolChart/SymbolChart";
+import CompanyNews from "../../components/ui/CompanyNews/CompanyNews";
 import { useQuote } from "../../hooks/useQuote";
 import { getMicCurrency } from "../../lib/constants";
 import "./Dashboard.css";
@@ -91,6 +92,7 @@ function DashboardContent() {
             <SymbolChart symbol={selectedSymbol.symbol} quote={quote} />
             <SymbolDetail symbol={selectedSymbol.symbol} />
           </div>
+          <CompanyNews symbol={selectedSymbol.symbol} />
         </div>
       ) : (
         <p className="dashboard__prompt">
