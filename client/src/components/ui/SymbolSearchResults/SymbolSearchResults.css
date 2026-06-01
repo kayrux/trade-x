@@ -15,6 +15,35 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
+.symbol-results__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px 4px 16px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.symbol-results__clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: inherit;
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.symbol-results__clear-btn:hover {
+  opacity: 1;
+}
+
 .symbol-results__status {
   padding: 10px 16px;
   color: var(--color-text-muted);

@@ -1,10 +1,11 @@
 import { X } from 'lucide-react';
 import './SearchBar.css';
 
-function SearchBar({ value = '', onChange, onFocus, onBlur, onClear }) {
+function SearchBar({ value = '', onChange, onFocus, onBlur, onClear, inputRef }) {
   return (
     <div className="search-bar">
       <input
+        ref={inputRef}
         type="text"
         className="search-bar__input"
         placeholder="Search markets, symbols..."

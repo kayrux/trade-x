@@ -1,9 +1,10 @@
 import "./SymbolSearchResults.css";
+import { Trash2 } from "lucide-react";
 import { getMicName } from "../../../lib/constants";
 
-function SymbolResultItem({ result, onSelect }) {
+function SymbolResultItem({ result, onSelect, isRecent }) {
   const price = parseFloat(result.last_price);
-  const hasPrice = !isNaN(price) && price > 0;
+  const hasPrice = !isRecent && !isNaN(price) && price > 0;
 
   return (
     <li
@@ -30,7 +31,7 @@ function SymbolResultItem({ result, onSelect }) {
   );
 }
 
-function SymbolSearchResults({ results, loading, error, visible, onSelect }) {
+function SymbolSearchResults({ results, loading, error, visible, onSelect, isRecent, onClearRecents }) {
   if (!visible) return null;
 
   return (
@@ -39,18 +40,31 @@ function SymbolSearchResults({ results, loading, error, visible, onSelect }) {
       role="listbox"
       aria-label="Symbol search results"
     >
+      {isRecent && results.length > 0 && (
+        <li className="symbol-results__header">
+          <span>Recent</span>
+          <button
+            className="symbol-results__clear-btn"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onClearRecents}
+            aria-label="Clear recent symbols"
+          >
+            <Trash2 size={14} />
+          </button>
+        </li>
+      )}
       {loading && <li className="symbol-results__status">Searching...</li>}
       {!loading && error && (
         <li className="symbol-results__status symbol-results__status--error">
           {error}
         </li>
       )}
-      {!loading && !error && results.length === 0 && (
+      {!loading && !error && !isRecent && results.length === 0 && (
         <li className="symbol-results__status">No results found</li>
       )}
       {!loading &&
         !error &&
-        results.map((r) => <SymbolResultItem key={r.id} result={r} onSelect={onSelect} />)}
+        results.map((r) => <SymbolResultItem key={r.id} result={r} onSelect={onSelect} isRecent={isRecent} />)}
     </ul>
   );
 }

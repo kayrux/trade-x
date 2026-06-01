@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Home, User, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { useSelectedSymbol } from '../../../context/SelectedSymbolContext';
 import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
+import { useRecentSymbols } from '../../../hooks/useRecentSymbols';
 import SearchBar from '../../forms/SearchBar/SearchBar';
 import SymbolSearchResults from '../../ui/SymbolSearchResults/SymbolSearchResults';
 import './Navbar.css';
@@ -12,13 +13,19 @@ function Navbar() {
   const { setSelectedSymbol } = useSelectedSymbol();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
+  const [recents, addRecentSymbol, clearRecentSymbols] = useRecentSymbols();
+  const searchInputRef = useRef(null);
 
   const { results, loading, error } = useSymbolSearch(query);
-  const showDropdown = focused && query.trim().length > 0;
+  const hasQuery = query.trim().length > 0;
+  const showDropdown = focused && (hasQuery || recents.length > 0);
 
   function handleSelect(result) {
+    addRecentSymbol(result);
     setSelectedSymbol(result);
     setQuery('');
+    setFocused(false);
+    searchInputRef.current?.blur();
   }
 
   return (
@@ -36,13 +43,16 @@ function Navbar() {
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
             onClear={() => setQuery('')}
+            inputRef={searchInputRef}
           />
           <SymbolSearchResults
-            results={results}
-            loading={loading}
-            error={error}
+            results={hasQuery ? results : recents}
+            loading={hasQuery ? loading : false}
+            error={hasQuery ? error : null}
+            isRecent={!hasQuery}
             visible={showDropdown}
             onSelect={handleSelect}
+            onClearRecents={clearRecentSymbols}
           />
         </div>
       </div>
