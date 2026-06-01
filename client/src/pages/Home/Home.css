@@ -62,8 +62,7 @@
 }
 
 .ticker-card:hover {
-  background: var(--color-input-bg);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-subtle);
 }
 
 .ticker-card:focus-visible {
@@ -189,7 +188,7 @@
 }
 
 .news-card:hover {
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-subtle);
 }
 
 .news-card__image {
