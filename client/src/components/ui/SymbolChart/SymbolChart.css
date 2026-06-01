@@ -1,0 +1,14 @@
+.symbol-chart {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.symbol-chart__footer {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+  justify-content: end;
+}
+
+

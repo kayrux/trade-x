@@ -1,0 +1,129 @@
+.dashboard {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 1rem 2rem;
+}
+
+.dashboard__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 1400px;
+}
+
+.dashboard__heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.dashboard__heading-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.dashboard__ticker {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.dashboard__name {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.dashboard__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.dashboard__price {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dashboard__currency {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.dashboard__change {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.dashboard__change--pos { color: #16a34a; }
+.dashboard__change--neg { color: #dc2626; }
+
+.dashboard__close-label {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
+}
+
+.dashboard__body {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .dashboard__body {
+    flex-direction: column;
+  }
+}
+
+@keyframes dashboard-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.dashboard__price-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard__price-skeleton {
+  width: 120px;
+  height: 34px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-navbar-border) 25%, var(--color-text-muted) 50%, var(--color-navbar-border) 75%);
+  background-size: 200% 100%;
+  animation: dashboard-shimmer 1.4s ease-in-out infinite;
+  opacity: 0.45;
+}
+
+.dashboard__change-skeleton {
+  width: 90px;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-navbar-border) 25%, var(--color-text-muted) 50%, var(--color-navbar-border) 75%);
+  background-size: 200% 100%;
+  animation: dashboard-shimmer 1.4s ease-in-out infinite;
+  opacity: 0.45;
+}
+
+.dashboard__prompt {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 80px;
+}
