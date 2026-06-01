@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Home, User, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
-import { useSelectedSymbol } from '../../../context/SelectedSymbolContext';
 import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
 import { useRecentSymbols } from '../../../hooks/useRecentSymbols';
 import SearchBar from '../../forms/SearchBar/SearchBar';
@@ -10,7 +10,7 @@ import './Navbar.css';
 
 function Navbar() {
   const { theme, toggleTheme } = useTheme();
-  const { setSelectedSymbol } = useSelectedSymbol();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
   const [recents, addRecentSymbol, clearRecentSymbols] = useRecentSymbols();
@@ -22,7 +22,7 @@ function Navbar() {
 
   function handleSelect(result) {
     addRecentSymbol(result);
-    setSelectedSymbol(result);
+    navigate(`/dashboard?symbol=${result.symbol}`);
     setQuery('');
     setFocused(false);
     searchInputRef.current?.blur();
@@ -31,7 +31,7 @@ function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar__left">
-        <button className="navbar__icon-btn" aria-label="Home">
+        <button className="navbar__icon-btn" aria-label="Home" onClick={() => navigate('/')}>
           <Home size={22} />
         </button>
       </div>

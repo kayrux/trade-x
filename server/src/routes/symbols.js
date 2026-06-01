@@ -7,6 +7,18 @@ const router = express.Router();
 const QUOTE_STALE_MS = 5 * 60 * 1000; // 5 minutes
 const PROFILE_STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+const MARKET_INDICES = [
+  { symbol: "SPY",             displayName: "S&P 500"   },
+  { symbol: "QQQ",             displayName: "NASDAQ"    },
+  { symbol: "DIA",             displayName: "DOW"       },
+  { symbol: "BINANCE:BTCUSDT", displayName: "Bitcoin"  },
+  { symbol: "BINANCE:ETHUSDT", displayName: "Ethereum" },
+];
+
+let _indicesCache = null;
+let _cacheTime = 0;
+const INDICES_CACHE_TTL = 60 * 1000;
+
 // GET /symbols?q=AAP — prefix search by ticker or company name, no quote data
 router.get("/", async (req, res) => {
   const raw = (req.query.q || "").trim();
@@ -29,6 +41,83 @@ router.get("/", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
+});
+
+// GET /symbols/batch?symbols=AAPL,MSFT — multi-symbol quote snapshot from DB (no Finnhub calls)
+router.get("/batch", async (req, res) => {
+  const raw = (req.query.symbols || "").trim();
+  if (!raw) return res.json([]);
+  const symbols = raw
+    .split(",")
+    .map((s) => s.toUpperCase().trim())
+    .filter(Boolean)
+    .slice(0, 20);
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT s.symbol, s.name, q.last_price, q.prev_close, q.synced_at
+       FROM symbols s
+       LEFT JOIN symbol_quotes q ON q.symbol_id = s.id
+       WHERE s.symbol = ANY($1)
+       ORDER BY array_position($1, s.symbol)`,
+      [symbols],
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// GET /market-indices — live quotes for 6 hardcoded market indices with prev_close fallback
+router.get("/market-indices", async (req, res) => {
+  const now = Date.now();
+  if (_indicesCache && now - _cacheTime < INDICES_CACHE_TTL) {
+    return res.json(_indicesCache);
+  }
+
+  const nz = (val) => (val != null && parseFloat(val) !== 0 ? parseFloat(val) : null);
+
+  const results = await Promise.allSettled(
+    MARKET_INDICES.map(({ symbol, displayName }) =>
+      axios
+        .get("https://finnhub.io/api/v1/quote", {
+          params: { symbol, token: process.env.FINNHUB_API_KEY },
+        })
+        .then(({ data }) => {
+          const livePrice = nz(data.c);
+          const prevClose = nz(data.pc);
+          const price = livePrice ?? prevClose;
+          const change = price != null && prevClose != null ? price - prevClose : null;
+          const changePct = change != null && prevClose ? (change / prevClose) * 100 : null;
+          return {
+            symbol,
+            displayName,
+            price,
+            prevClose,
+            change,
+            changePct,
+            price_source: livePrice != null ? "live" : prevClose != null ? "prev_close" : null,
+            synced_at: new Date().toISOString(),
+          };
+        })
+        .catch(() => ({
+          symbol,
+          displayName,
+          price: null,
+          prevClose: null,
+          change: null,
+          changePct: null,
+          price_source: null,
+          synced_at: null,
+        })),
+    ),
+  );
+
+  const data = results.map((r) => (r.status === "fulfilled" ? r.value : r.reason));
+  _indicesCache = data;
+  _cacheTime = now;
+  res.json(data);
 });
 
 // GET /symbols/:symbol — exact match with quote data, falls back to latest daily candle
