@@ -15,6 +15,43 @@ function toDateStr(date) {
   return date.toISOString().split('T')[0];
 }
 
+// GET /news/market — general market news, not symbol-specific
+router.get('/market', async (req, res) => {
+  const CACHE_KEY = '__market__';
+  const cached = cache.get(CACHE_KEY);
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return res.json({ news: cached.data });
+  }
+
+  try {
+    const { data } = await axios.get(`${FINNHUB_BASE}/news`, {
+      params: { category: 'general', token: process.env.FINNHUB_API_KEY },
+    });
+
+    const news = Array.isArray(data)
+      ? data
+          .sort((a, b) => b.datetime - a.datetime)
+          .slice(0, MAX_ITEMS)
+          .map(({ id, headline, summary, url, source, datetime, image, category }) => ({
+            id,
+            headline,
+            summary,
+            url,
+            source,
+            datetime,
+            image,
+            category,
+          }))
+      : [];
+
+    cache.set(CACHE_KEY, { data: news, fetchedAt: Date.now() });
+    res.json({ news });
+  } catch (err) {
+    console.error('market news route error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /news/:symbol
 router.get('/:symbol', async (req, res) => {
   const symbol = req.params.symbol.toUpperCase().trim();
