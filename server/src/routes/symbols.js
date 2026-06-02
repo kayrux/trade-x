@@ -4,7 +4,7 @@ const pool = require("../db");
 
 const router = express.Router();
 
-const QUOTE_STALE_MS = 5 * 60 * 1000; // 5 minutes
+const QUOTE_STALE_MS = 30 * 1000; // 30 seconds
 const PROFILE_STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const MARKET_INDICES = [
@@ -17,7 +17,7 @@ const MARKET_INDICES = [
 
 let _indicesCache = null;
 let _cacheTime = 0;
-const INDICES_CACHE_TTL = 60 * 1000;
+const INDICES_CACHE_TTL = 30 * 1000;
 
 // GET /symbols?q=AAP — prefix search by ticker or company name, no quote data
 router.get("/", async (req, res) => {
@@ -164,7 +164,7 @@ router.get("/:symbol", async (req, res) => {
 
     if (isStale) {
       try {
-        const fresh = await refreshQuote(row.id);
+        const fresh = await refreshQuote(row.id, row.symbol);
         row.last_price = fresh.last_price;
         row.open = fresh.open;
         row.high = fresh.high;
@@ -226,9 +226,9 @@ router.get("/:symbol", async (req, res) => {
   }
 });
 
-async function refreshQuote(symbolId) {
+async function refreshQuote(symbolId, ticker) {
   const { data } = await axios.get("https://finnhub.io/api/v1/quote", {
-    params: { symbol: symbolId, token: process.env.FINNHUB_API_KEY },
+    params: { symbol: ticker, token: process.env.FINNHUB_API_KEY },
   });
 
   const synced_at = new Date();
