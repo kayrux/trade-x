@@ -3,7 +3,7 @@ import { fetchCandles } from '../lib/api/candles';
 
 const MAX_RETRIES = 10;
 
-export function useCandles(symbol, resolution) {
+export function useCandles(symbol, resolution, range = null) {
   const [candles, setCandles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -27,7 +27,7 @@ export function useCandles(symbol, resolution) {
       if (!isRetry) setLoading(true);
       setError(null);
       try {
-        const data = await fetchCandles(symbol, resolution);
+        const data = await fetchCandles(symbol, resolution, { range });
         if (cancelled) return;
         setCandles(data.candles);
         if (data.candles.length === 0 && retryCountRef.current < MAX_RETRIES) {
@@ -51,7 +51,7 @@ export function useCandles(symbol, resolution) {
       cancelled = true;
       if (retryRef.current) clearTimeout(retryRef.current);
     };
-  }, [symbol, resolution]);
+  }, [symbol, resolution, range]);
 
   return { candles, loading, error };
 }

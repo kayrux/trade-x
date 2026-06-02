@@ -130,6 +130,7 @@ router.get("/:symbol", async (req, res) => {
               q.last_price, q.open, q.high, q.low, q.volume, q.prev_close, q.synced_at,
               c.close AS candle_close, c.open AS candle_open, c.high AS candle_high,
               c.low AS candle_low, c.volume AS candle_volume, c.ts AS candle_ts,
+              c_prev.prev_candle_close,
               p.market_cap, p.industry, p.shares_outstanding, p.ipo_date, p.weburl,
               p.week52_high, p.week52_low, p.beta, p.synced_at AS profile_synced_at
        FROM symbols s
@@ -142,6 +143,13 @@ router.get("/:symbol", async (req, res) => {
          ORDER BY ts DESC
          LIMIT 1
        ) c ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT close AS prev_candle_close
+         FROM symbol_candles
+         WHERE symbol_id = s.id AND resolution = 'daily'
+         ORDER BY ts DESC
+         LIMIT 1 OFFSET 1
+       ) c_prev ON TRUE
        WHERE s.symbol = $1`,
       [symbol],
     );
@@ -196,7 +204,7 @@ router.get("/:symbol", async (req, res) => {
       high: nz(row.high) ?? row.candle_high,
       low: nz(row.low) ?? row.candle_low,
       volume: nz(row.volume) ?? row.candle_volume,
-      prev_close: nz(row.prev_close),
+      prev_close: nz(row.prev_close) ?? row.prev_candle_close ?? null,
       synced_at: hasLiveQuote ? row.synced_at : row.candle_ts,
       price_source: hasLiveQuote
         ? "live"

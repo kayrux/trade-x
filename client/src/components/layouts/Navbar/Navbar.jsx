@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, User, Sun, Moon } from 'lucide-react';
+import { User, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
+import logoDark from '../../../assets/images/tradex-logo-dark.svg';
+import logoLight from '../../../assets/images/tradex-logo-light.svg';
 import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
 import { useRecentSymbols } from '../../../hooks/useRecentSymbols';
 import SearchBar from '../../forms/SearchBar/SearchBar';
@@ -31,8 +33,12 @@ function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar__left">
-        <button className="navbar__icon-btn" aria-label="Home" onClick={() => navigate('/')}>
-          <Home size={22} />
+        <button className="navbar__logo-btn" aria-label="Home" onClick={() => navigate('/')}>
+          <img
+            src={theme === 'dark' ? logoDark : logoLight}
+            alt="Trade X"
+            className="navbar__logo"
+          />
         </button>
       </div>
       <div className="navbar__center">
