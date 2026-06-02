@@ -8,7 +8,15 @@
   display: flex;
   align-items: center;
   margin-top: 12px;
-  justify-content: end;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.symbol-chart__divider {
+  width: 1px;
+  height: 16px;
+  background: var(--color-navbar-border);
+  flex-shrink: 0;
 }
 
 

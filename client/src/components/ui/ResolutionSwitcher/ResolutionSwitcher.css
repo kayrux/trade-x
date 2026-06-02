@@ -7,9 +7,9 @@
   padding: 4px 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border: 1px solid var(--color-navbar-border);
+  text-transform: none;
+  letter-spacing: 0;
+  border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: var(--color-text-muted);
@@ -19,7 +19,6 @@
 
 .resolution-switcher__btn:hover {
   color: var(--color-text-primary);
-  border-color: var(--color-text-muted);
 }
 
 .resolution-switcher__btn--active {

@@ -4,12 +4,27 @@ import CandleChart from '../CandleChart/CandleChart';
 import ResolutionSwitcher from '../ResolutionSwitcher/ResolutionSwitcher';
 import './SymbolChart.css';
 
-const RESOLUTIONS = ['daily', 'weekly', 'monthly'];
+const RESOLUTIONS = ['Daily', 'Weekly', 'Monthly'];
+const RANGES = ['5D', '1M', '3M', 'YTD', '1Y', '5Y', 'Max'];
 
 
 function SymbolChart({ symbol, quote }) {
-  const [resolution, setResolution] = useState('daily');
-  const { candles, loading, error } = useCandles(symbol, resolution);
+  const [activeMode, setActiveMode] = useState('range');
+  const [resolution, setResolution] = useState('Daily');
+  const [range, setRange] = useState('1Y');
+  const { candles, loading, error } = useCandles(symbol, resolution.toLowerCase(), range.toLowerCase());
+
+  const handleRangeChange = (newRange) => {
+    setRange(newRange);
+    setResolution('Daily');
+    setActiveMode('range');
+  };
+
+  const handleResolutionChange = (newResolution) => {
+    setResolution(newResolution);
+    setRange('Max');
+    setActiveMode('resolution');
+  };
 
   const candlesWithToday = useMemo(() => {
     if (!candles.length || !quote || quote.symbol !== symbol) return candles;
@@ -55,8 +70,14 @@ function SymbolChart({ symbol, quote }) {
       />
       <div className="symbol-chart__footer">
         <ResolutionSwitcher
-          resolution={resolution}
-          onChange={setResolution}
+          resolution={activeMode === 'range' ? range : null}
+          onChange={handleRangeChange}
+          options={RANGES}
+        />
+        <span className="symbol-chart__divider" />
+        <ResolutionSwitcher
+          resolution={activeMode === 'resolution' ? resolution : null}
+          onChange={handleResolutionChange}
           options={RESOLUTIONS}
         />
       </div>
