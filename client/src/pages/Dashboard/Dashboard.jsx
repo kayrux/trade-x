@@ -14,24 +14,18 @@ function SymbolHeading({ symbol, quote, loading }) {
   const price = quote ? parseFloat(quote.last_price) : NaN;
   const hasPrice = !isNaN(price) && price > 0;
   const showPriceSkeleton = !hasPrice && (loading || quote?.price_source === null);
-  const open = quote ? parseFloat(quote.open) : NaN;
-  const hasChange = hasPrice && !isNaN(open) && open > 0;
-  const change = hasChange ? price - open : 0;
-  const changePct = hasChange ? (change / open) * 100 : 0;
+  const prevClose = quote ? parseFloat(quote.prev_close) : NaN;
+  const hasChange = hasPrice && !isNaN(prevClose) && prevClose > 0;
+  const change = hasChange ? price - prevClose : 0;
+  const changePct = hasChange ? (change / prevClose) * 100 : 0;
   const changeDir = change >= 0 ? "pos" : "neg";
   const changeText = hasChange
-    ? `${change >= 0 ? "+" : ""}$${Math.abs(change).toFixed(2)} (${change >= 0 ? "+" : ""}${changePct.toFixed(2)}%) ${quote?.price_source !== "historical" || !quote?.synced_at ? "today" : ""}`
+    ? `${change >= 0 ? "+" : ""}$${Math.abs(change).toFixed(2)} (${change >= 0 ? "+" : ""}${changePct.toFixed(2)}%)${quote?.price_source === "live" ? " today" : ""}`
     : null;
 
   const closeLabel = (() => {
-    if (quote?.price_source !== "historical" || !quote?.synced_at) return null;
+    if (!quote?.synced_at) return null;
     const date = new Date(quote.synced_at);
-    const datePart = new Intl.DateTimeFormat("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      timeZone: "America/New_York",
-    }).format(date);
     const tzAbbr =
       new Intl.DateTimeFormat("en-US", {
         timeZoneName: "short",
@@ -39,7 +33,25 @@ function SymbolHeading({ symbol, quote, loading }) {
       })
         .formatToParts(date)
         .find((p) => p.type === "timeZoneName")?.value ?? "ET";
-    return `At close: ${datePart} at 4:00 PM ${tzAbbr}`;
+    if (quote?.price_source === "historical") {
+      const datePart = new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "America/New_York",
+      }).format(date);
+      return `At close: ${datePart} at 4:00 PM ${tzAbbr}`;
+    }
+    if (quote?.price_source === "live") {
+      const timePart = new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: "America/New_York",
+      }).format(date);
+      return `Last updated: ${timePart} ${tzAbbr}`;
+    }
+    return null;
   })();
 
   return (
