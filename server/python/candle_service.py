@@ -13,6 +13,7 @@ Response (always 200 unless a hard error):
 """
 
 import asyncio
+import math
 import time
 from datetime import date
 from typing import Optional
@@ -59,6 +60,14 @@ def _fetch_with_retry(ticker: str, start: str, end: str) -> pd.DataFrame:
     raise last_exc
 
 
+def _safe_float(val, default=0.0) -> float:
+    try:
+        f = float(val)
+        return default if (math.isnan(f) or math.isinf(f)) else f
+    except (TypeError, ValueError):
+        return default
+
+
 def _df_to_candles(df: pd.DataFrame, symbol: str) -> list[dict]:
     if df is None or df.empty:
         return []
@@ -66,18 +75,21 @@ def _df_to_candles(df: pd.DataFrame, symbol: str) -> list[dict]:
     # Normalise column names to lowercase
     df.columns = [c.lower().replace(" ", "_") for c in df.columns]
 
+    # Drop rows where all OHLCV columns are NaN (non-trading days / data gaps)
+    ohlcv_cols = [c for c in ["open", "high", "low", "close", "volume"] if c in df.columns]
+    df = df.dropna(subset=ohlcv_cols, how="all")
+
     candles = []
     for ts, row in df.iterrows():
-        # ts is a pandas Timestamp; format as YYYY-MM-DD
         date_str = ts.strftime("%Y-%m-%d")
         candles.append({
-            "date":          date_str,
-            "open":          float(row.get("open",  0) or 0),
-            "high":          float(row.get("high",  0) or 0),
-            "low":           float(row.get("low",   0) or 0),
-            "close":         float(row.get("close", 0) or 0),
-            "adjusted_close": float(row.get("adj_close", 0) or 0),
-            "volume":        int(row.get("volume",  0) or 0),
+            "date":           date_str,
+            "open":           _safe_float(row.get("open")),
+            "high":           _safe_float(row.get("high")),
+            "low":            _safe_float(row.get("low")),
+            "close":          _safe_float(row.get("close")),
+            "adjusted_close": _safe_float(row.get("adj_close")),
+            "volume":         int(_safe_float(row.get("volume"))),
         })
     return candles
 
