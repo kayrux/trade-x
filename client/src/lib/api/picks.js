@@ -1,10 +1,11 @@
 import { API_BASE_URL } from '../constants/index';
 
-export async function fetchPicks({ channelId, symbol, sentiment } = {}) {
+export async function fetchPicks({ channelId, symbol, sentiment, videoId } = {}) {
   const params = new URLSearchParams();
   if (channelId) params.set('channel_id', channelId);
   if (symbol) params.set('symbol', symbol);
   if (sentiment) params.set('sentiment', sentiment);
+  if (videoId) params.set('video_id', videoId);
 
   const qs = params.toString();
   const res = await fetch(`${API_BASE_URL}/picks${qs ? `?${qs}` : ''}`);

@@ -3,10 +3,10 @@ const pool = require('../db');
 
 const router = express.Router();
 
-// GET /picks?channel_id=&symbol=&sentiment=
+// GET /picks?channel_id=&symbol=&sentiment=&video_id=
 // Returns resolved picks with current performance data, newest first.
 router.get('/', async (req, res) => {
-  const { channel_id, symbol, sentiment } = req.query;
+  const { channel_id, symbol, sentiment, video_id } = req.query;
 
   const conditions = [`p.resolution_status = 'resolved'`];
   const params = [];
@@ -22,6 +22,10 @@ router.get('/', async (req, res) => {
   if (sentiment) {
     params.push(sentiment.toLowerCase());
     conditions.push(`p.sentiment = $${params.length}`);
+  }
+  if (video_id) {
+    params.push(video_id);
+    conditions.push(`v.id = $${params.length}`);
   }
 
   const where = conditions.join(' AND ');

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchPicks } from '../lib/api/picks';
 
-export function usePicks({ channelId, sentiment } = {}) {
+export function usePicks({ channelId, sentiment, videoId } = {}) {
   const [picks, setPicks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -12,7 +12,11 @@ export function usePicks({ channelId, sentiment } = {}) {
     setLoading(true);
     setError(null);
 
-    fetchPicks({ channelId: channelId || undefined, sentiment: sentiment || undefined })
+    fetchPicks({
+      channelId: channelId || undefined,
+      sentiment: sentiment || undefined,
+      videoId: videoId || undefined,
+    })
       .then((data) => {
         if (!cancelled) setPicks(data);
       })
@@ -26,7 +30,7 @@ export function usePicks({ channelId, sentiment } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [channelId, sentiment, refreshKey]);
+  }, [channelId, sentiment, videoId, refreshKey]);
 
   return { picks, loading, error, refresh: () => setRefreshKey((k) => k + 1) };
 }
