@@ -115,18 +115,20 @@ export default function YouTuberPicks() {
                   >
                     <td className="picks-table__date">{formatDate(v.published_at)}</td>
                     <td className="picks-table__channel">{v.channel_name}</td>
-                    <td className="sync-history__title-cell">
-                      <span className="sync-history__video-title">{v.title || v.youtube_video_id}</span>
-                      <a
-                        className="picks-video-link"
-                        href={`https://youtube.com/watch?v=${v.youtube_video_id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="Open on YouTube"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink size={13} />
-                      </a>
+                    <td>
+                      <div className="sync-history__title-cell">
+                        <span className="sync-history__video-title">{v.title || v.youtube_video_id}</span>
+                        <a
+                          className="picks-video-link"
+                          href={`https://youtube.com/watch?v=${v.youtube_video_id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Open on YouTube"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                      </div>
                     </td>
                     <td><StatusBadge status={v.status} /></td>
                     <td className="sync-history__count">{v.picks_count}</td>

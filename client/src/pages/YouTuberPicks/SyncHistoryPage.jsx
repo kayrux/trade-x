@@ -172,16 +172,18 @@ export default function SyncHistoryPage() {
                   <tr key={v.video_id} className="picks-table__row">
                     <td className="picks-table__date">{formatDate(v.published_at)}</td>
                     <td className="picks-table__channel">{v.channel_name}</td>
-                    <td className="sync-history__title-cell">
-                      <a
-                        className="sync-history__video-link"
-                        href={`https://youtube.com/watch?v=${v.youtube_video_id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={v.title}
-                      >
-                        {v.title || v.youtube_video_id}
-                      </a>
+                    <td>
+                      <div className="sync-history__title-cell">
+                        <a
+                          className="sync-history__video-link"
+                          href={`https://youtube.com/watch?v=${v.youtube_video_id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={v.title}
+                        >
+                          {v.title || v.youtube_video_id}
+                        </a>
+                      </div>
                     </td>
                     <td><StatusBadge status={v.status} /></td>
                     <td><TranscriptBadge status={v.transcript_status} /></td>
