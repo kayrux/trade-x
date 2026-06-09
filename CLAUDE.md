@@ -132,4 +132,9 @@ Complete each phase before starting the next.
 
 ## Restrictions
 
-- You are not allowed to access .env files
+- Never access `.env` files directly. This applies to you and to any subagents you spawn — always include this restriction explicitly in subagent prompts.
+- To find required environment variable names, grep source files for `process.env.` references instead of reading `.env`.
+
+## Subagents
+
+When spawning agents via the Agent tool, explicitly include all restrictions from this file in the subagent prompt. Subagents start fresh and do not inherit the parent conversation's context.
