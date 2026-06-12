@@ -329,6 +329,51 @@
 .sync-history__count--green { color: #4ade80; }
 .sync-history__count--amber { color: #fbbf24; }
 
+.sync-history__count--clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-style: dotted;
+}
+.sync-history__count--clickable:hover { opacity: 0.8; }
+
+/* Picks detail modal */
+.picks-detail-modal { min-width: 380px; }
+
+.picks-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.picks-detail-table th {
+  text-align: left;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid #2d3748;
+}
+.picks-detail-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: var(--color-text);
+}
+.picks-detail-table tbody tr:last-child td { border-bottom: none; }
+
+.picks-detail-table__ticker {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.picks-detail-table__company { color: var(--color-text-muted); }
+
+.picks-detail-status--resolved { color: #4ade80; }
+.picks-detail-status--unmatched { color: #fbbf24; }
+.picks-detail-status--needs_review { color: #94a3b8; }
+.picks-detail-status--pending { color: #64748b; }
+
 /* Error column */
 .sync-history__error {
   max-width: 200px;

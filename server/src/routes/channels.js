@@ -164,7 +164,18 @@ router.get('/videos', async (req, res) => {
           tc.name                                                           AS channel_name,
           COUNT(p.id)                                                       AS picks_count,
           COUNT(p.id) FILTER (WHERE p.resolution_status = 'resolved')      AS resolved_count,
-          COUNT(p.id) FILTER (WHERE p.resolution_status = 'unmatched')     AS unmatched_count
+          COUNT(p.id) FILTER (WHERE p.resolution_status = 'unmatched')     AS unmatched_count,
+          COALESCE(
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'ticker',  COALESCE(p.raw_ticker, '?'),
+                'company', p.raw_company_name,
+                'status',  p.resolution_status
+              )
+              ORDER BY p.raw_ticker
+            ) FILTER (WHERE p.id IS NOT NULL),
+            '[]'::json
+          )                                                                 AS picks_list
        FROM videos v
        JOIN  tracked_channels tc ON tc.id = v.channel_id
        LEFT JOIN picks p         ON p.video_id = v.id

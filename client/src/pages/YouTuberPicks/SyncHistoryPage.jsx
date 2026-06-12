@@ -59,6 +59,8 @@ export default function SyncHistoryPage() {
     ? channels.find(c => c.id === channelFilter)?.last_checked_at
     : channels.reduce((latest, c) => (!latest || c.last_checked_at > latest) ? c.last_checked_at : latest, null);
 
+  const [picksModal, setPicksModal] = useState(null);
+
   const [geminiModal, setGeminiModal] = useState(null);
   const [geminiData, setGeminiData]   = useState({ loading: false, result: null, error: null });
 
@@ -187,9 +189,18 @@ export default function SyncHistoryPage() {
                     </td>
                     <td><StatusBadge status={v.status} /></td>
                     <td><TranscriptBadge status={v.transcript_status} /></td>
-                    <td className="sync-history__count">{v.picks_count}</td>
-                    <td className="sync-history__count sync-history__count--green">{v.resolved_count}</td>
-                    <td className="sync-history__count sync-history__count--amber">{v.unmatched_count}</td>
+                    <td
+                      className={`sync-history__count${Number(v.picks_count) > 0 ? ' sync-history__count--clickable' : ''}`}
+                      onClick={Number(v.picks_count) > 0 ? () => setPicksModal({ title: 'Picks', items: v.picks_list ?? [], showStatus: true }) : undefined}
+                    >{v.picks_count}</td>
+                    <td
+                      className={`sync-history__count sync-history__count--green${Number(v.resolved_count) > 0 ? ' sync-history__count--clickable' : ''}`}
+                      onClick={Number(v.resolved_count) > 0 ? () => setPicksModal({ title: 'Resolved', items: (v.picks_list ?? []).filter(p => p.status === 'resolved'), showStatus: false }) : undefined}
+                    >{v.resolved_count}</td>
+                    <td
+                      className={`sync-history__count sync-history__count--amber${Number(v.unmatched_count) > 0 ? ' sync-history__count--clickable' : ''}`}
+                      onClick={Number(v.unmatched_count) > 0 ? () => setPicksModal({ title: 'Unmatched', items: (v.picks_list ?? []).filter(p => p.status === 'unmatched'), showStatus: false }) : undefined}
+                    >{v.unmatched_count}</td>
                     <td className="sync-history__error" title={v.error_detail || ''}>
                       {v.error_detail
                         ? v.error_detail.slice(0, 60) + (v.error_detail.length > 60 ? '…' : '')
@@ -218,6 +229,48 @@ export default function SyncHistoryPage() {
           </table>
         </div>
       </div>
+
+      {picksModal && (
+        <div className="transcript-overlay" onClick={() => setPicksModal(null)}>
+          <div className="transcript-modal picks-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="transcript-modal__header">
+              <div className="transcript-modal__title-group">
+                <h3 className="transcript-modal__title">{picksModal.title}</h3>
+                <span className="transcript-modal__meta">{picksModal.items.length} pick{picksModal.items.length !== 1 ? 's' : ''}</span>
+              </div>
+              <button className="transcript-modal__close" onClick={() => setPicksModal(null)}>✕</button>
+            </div>
+            <div className="transcript-modal__body">
+              {picksModal.items.length === 0 ? (
+                <div className="transcript-modal__status transcript-modal__status--empty">No picks.</div>
+              ) : (
+                <table className="picks-detail-table">
+                  <thead>
+                    <tr>
+                      <th>Ticker</th>
+                      <th>Company</th>
+                      {picksModal.showStatus && <th>Status</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {picksModal.items.map((p, i) => (
+                      <tr key={i}>
+                        <td className="picks-detail-table__ticker">{p.ticker}</td>
+                        <td className="picks-detail-table__company">{p.company || <span className="sync-transcript--none">—</span>}</td>
+                        {picksModal.showStatus && (
+                          <td>
+                            <span className={`picks-badge picks-detail-status--${p.status}`}>{p.status}</span>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {geminiModal && (
         <div className="transcript-overlay" onClick={() => setGeminiModal(null)}>
