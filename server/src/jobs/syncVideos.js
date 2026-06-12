@@ -4,9 +4,9 @@ const { fetchTranscript, formatForLLM } = require('../lib/transcriptFetcher');
 const { extractPicks } = require('../lib/geminiExtractor');
 const { resolveSymbol, getPriceAtMention } = require('../lib/picksValidator');
 
-function twoWeeksAgo() {
+function sevenDaysAgo() {
   const d = new Date();
-  d.setDate(d.getDate() - 14);
+  d.setDate(d.getDate() - 7);
   return d;
 }
 
@@ -77,7 +77,7 @@ async function runPipeline(video) {
 
 // Discovers and processes new videos for one channel.
 async function processChannel(channel) {
-  const since = channel.last_checked_at ? new Date(channel.last_checked_at) : twoWeeksAgo();
+  const since = channel.last_checked_at ? new Date(channel.last_checked_at) : sevenDaysAgo();
   console.log(`[syncVideos] Checking channel "${channel.name}" since ${since.toISOString()}`);
 
   let newVideos;

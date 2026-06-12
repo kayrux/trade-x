@@ -518,6 +518,116 @@
   margin: 0;
 }
 
+/* ── Header action group ─────────────────────────── */
+.picks-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Add Channel button ──────────────────────────── */
+.picks-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-accent);
+  font-size: 0.8125rem;
+  padding: 6px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.picks-add-btn:hover {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+/* ── Add Channel modal ───────────────────────────── */
+.add-channel-modal {
+  max-width: 440px;
+}
+
+.add-channel-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.add-channel-modal__label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.add-channel-modal__input {
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.add-channel-modal__input:focus {
+  border-color: var(--color-accent);
+}
+
+.add-channel-modal__error {
+  font-size: 0.8125rem;
+  color: #f87171;
+  margin: 0;
+}
+
+.add-channel-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.add-channel-modal__cancel {
+  background: none;
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.add-channel-modal__cancel:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text-primary);
+}
+
+.add-channel-modal__submit {
+  background: var(--color-accent);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.add-channel-modal__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* ── Back button (child routes) ──────────────────── */
 .picks-back-btn {
   display: inline-flex;

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, History } from 'lucide-react';
+import { ExternalLink, History, Plus, X } from 'lucide-react';
 import PageLayout from '../../components/layouts/PageLayout/PageLayout';
 import { useSyncHistory } from '../../hooks/useSyncHistory';
-import { fetchChannels } from '../../lib/api/picks';
+import { fetchChannels, addChannel } from '../../lib/api/picks';
 import './YouTuberPicks.css';
 
 function formatDate(iso) {
@@ -29,15 +29,84 @@ function SkeletonRows() {
   ));
 }
 
+function AddChannelModal({ onClose, onAdded }) {
+  const [form, setForm] = useState({ youtube_channel_id: '', name: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await addChannel(form);
+      onAdded();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="transcript-overlay" onClick={onClose}>
+      <div className="transcript-modal add-channel-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="transcript-modal__header">
+          <div className="transcript-modal__title-group">
+            <h2 className="transcript-modal__title">Add Channel</h2>
+            <p className="transcript-modal__meta">Syncs the last 7 days of videos automatically.</p>
+          </div>
+          <button className="transcript-modal__close" onClick={onClose}><X size={16} /></button>
+        </div>
+        <form className="add-channel-modal__body" onSubmit={handleSubmit}>
+          <label className="add-channel-modal__label">
+            YouTube Channel ID
+            <input
+              className="add-channel-modal__input"
+              placeholder="e.g. UCxxxxxxxxxxxxxxxxxxxxxx"
+              value={form.youtube_channel_id}
+              onChange={(e) => setForm((f) => ({ ...f, youtube_channel_id: e.target.value.trim() }))}
+              required
+              autoFocus
+            />
+          </label>
+          <label className="add-channel-modal__label">
+            Channel Name
+            <input
+              className="add-channel-modal__input"
+              placeholder="e.g. Invest with Alex"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              required
+            />
+          </label>
+          {error && <p className="add-channel-modal__error">{error}</p>}
+          <div className="add-channel-modal__actions">
+            <button type="button" className="add-channel-modal__cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" className="add-channel-modal__submit" disabled={loading}>
+              {loading ? 'Adding…' : 'Add Channel'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function YouTuberPicks() {
   const navigate = useNavigate();
   const [channels, setChannels] = useState([]);
   const [channelFilter, setChannelFilter] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
+  function loadChannels() {
     fetchChannels()
       .then(setChannels)
       .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadChannels();
   }, []);
 
   const { videos, loading, error } = useSyncHistory({ channelId: channelFilter });
@@ -50,6 +119,12 @@ export default function YouTuberPicks() {
 
   return (
     <PageLayout>
+      {showAddModal && (
+        <AddChannelModal
+          onClose={() => setShowAddModal(false)}
+          onAdded={() => { setShowAddModal(false); loadChannels(); }}
+        />
+      )}
       <div className="picks-page">
         <div className="picks-page__header">
           <div>
@@ -58,14 +133,23 @@ export default function YouTuberPicks() {
               Videos from tracked channels — click a row to see the stock picks.
             </p>
           </div>
-          <button
-            className="picks-history-btn"
-            title="View sync history"
-            onClick={() => navigate('/picks/sync-history')}
-          >
-            <History size={16} />
-            <span>Sync History</span>
-          </button>
+          <div className="picks-header-actions">
+            <button
+              className="picks-add-btn"
+              onClick={() => setShowAddModal(true)}
+            >
+              <Plus size={16} />
+              <span>Add Channel</span>
+            </button>
+            <button
+              className="picks-history-btn"
+              title="View sync history"
+              onClick={() => navigate('/picks/sync-history')}
+            >
+              <History size={16} />
+              <span>Sync History</span>
+            </button>
+          </div>
         </div>
 
         <div className="picks-filters">

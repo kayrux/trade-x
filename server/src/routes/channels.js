@@ -7,7 +7,7 @@ const { extractPicksDebug } = require('../lib/geminiExtractor');
 
 const router = express.Router();
 
-// POST /channels — add a new tracked channel and kick off a 2-week backfill
+// POST /channels — add a new tracked channel and kick off a 7-day backfill
 router.post('/', async (req, res) => {
   const { youtube_channel_id, name } = req.body;
   if (!youtube_channel_id || !name) {
@@ -40,7 +40,7 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ error: 'Database error' });
   }
 
-  // Fire-and-forget backfill (last_checked_at is null → defaults to 2 weeks ago in processChannel)
+  // Fire-and-forget backfill (last_checked_at is null → defaults to 7 days ago in processChannel)
   setImmediate(() =>
     processChannel(channel).catch((err) =>
       console.error(`[channels] Backfill failed for ${channel.name}:`, err.message),
