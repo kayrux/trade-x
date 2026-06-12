@@ -118,6 +118,11 @@
 .picks-symbol__ticker {
   font-weight: 600;
   color: var(--color-accent);
+  text-decoration: none;
+}
+
+.picks-symbol__ticker:hover {
+  text-decoration: underline;
 }
 
 .picks-symbol__name {
@@ -552,7 +557,7 @@
 .picks-video-detail-header__channel {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-accent);
+  color: var(--color-text-muted);
 }
 
 .picks-video-detail-header__date {
@@ -580,4 +585,60 @@
 
 .picks-video-link--large:hover {
   color: var(--color-accent);
+}
+
+/* ── Clickable notes ─────────────────────────────── */
+.picks-notes--clickable {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  width: 100%;
+}
+
+.picks-notes--clickable:hover {
+  color: var(--color-text-primary);
+}
+
+.picks-notes__more {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  margin-top: 2px;
+}
+
+/* ── Notes modal ─────────────────────────────────── */
+.picks-notes-modal__item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-navbar-border);
+}
+
+.picks-notes-modal__item:last-child {
+  border-bottom: none;
+}
+
+.picks-notes-modal__index {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-navbar-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.picks-notes-modal__text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-text-primary);
 }

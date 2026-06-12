@@ -1,4 +1,5 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import PageLayout from '../../components/layouts/PageLayout/PageLayout';
 import { usePicks } from '../../hooks/usePicks';
@@ -58,6 +59,27 @@ export default function VideoPicksDetail() {
 
   const navState = location.state || {};
   const { picks, loading, error } = usePicks({ videoId });
+  const [notesModal, setNotesModal] = useState(null);
+
+  const groupedPicks = useMemo(() => {
+    const map = new Map();
+    for (const pick of picks) {
+      if (!map.has(pick.symbol)) {
+        map.set(pick.symbol, {
+          ...pick,
+          allNotes: pick.notes ? [pick.notes] : [],
+          timestamps: [{ youtube_video_id: pick.youtube_video_id, video_timestamp_seconds: pick.video_timestamp_seconds }],
+        });
+      } else {
+        const existing = map.get(pick.symbol);
+        if (pick.notes) existing.allNotes.push(pick.notes);
+        existing.timestamps.push({ youtube_video_id: pick.youtube_video_id, video_timestamp_seconds: pick.video_timestamp_seconds });
+        if (!existing.sentiment && pick.sentiment) existing.sentiment = pick.sentiment;
+        if (pick.sentiment?.toLowerCase() === 'bullish') existing.sentiment = 'bullish';
+      }
+    }
+    return Array.from(map.values());
+  }, [picks]);
 
   const firstPick = picks[0];
   const title = navState.title || firstPick?.video_title || 'Video';
@@ -114,26 +136,37 @@ export default function VideoPicksDetail() {
             <tbody>
               {loading ? (
                 <SkeletonRows />
-              ) : picks.length === 0 ? (
+              ) : groupedPicks.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="picks-table__empty">
                     {error ? '' : 'No resolved picks found for this video.'}
                   </td>
                 </tr>
               ) : (
-                picks.map((pick) => (
-                  <tr key={pick.pick_id} className="picks-table__row">
+                groupedPicks.map((pick) => (
+                  <tr key={pick.symbol} className="picks-table__row">
                     <td className="picks-table__symbol">
                       <div className="picks-symbol">
-                        <span className="picks-symbol__ticker">{pick.symbol}</span>
+                        <Link className="picks-symbol__ticker" to={`/dashboard?symbol=${pick.symbol}`}>{pick.symbol}</Link>
                         <span className="picks-symbol__name">{pick.company_name}</span>
                       </div>
                     </td>
                     <td><SentimentBadge sentiment={pick.sentiment} /></td>
                     <td className="picks-table__notes">
-                      <span className="picks-notes" title={pick.notes || ''}>
-                        {pick.notes || '—'}
-                      </span>
+                      {pick.allNotes.length > 0 ? (
+                        <button
+                          className="picks-notes picks-notes--clickable"
+                          onClick={() => setNotesModal({ symbol: pick.symbol, notes: pick.allNotes })}
+                          title="Click to expand notes"
+                        >
+                          {pick.allNotes[0]}
+                          {pick.allNotes.length > 1 && (
+                            <span className="picks-notes__more">+{pick.allNotes.length - 1} more</span>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="picks-notes">—</span>
+                      )}
                     </td>
                     <td className="picks-table__price">{formatPrice(pick.price_at_mention)}</td>
                     <td className="picks-table__price">{formatPrice(pick.current_price)}</td>
@@ -143,7 +176,7 @@ export default function VideoPicksDetail() {
                     <td>
                       <a
                         className="picks-video-link"
-                        href={videoLink(pick.youtube_video_id, pick.video_timestamp_seconds)}
+                        href={videoLink(pick.timestamps[0].youtube_video_id, pick.timestamps[0].video_timestamp_seconds)}
                         target="_blank"
                         rel="noreferrer"
                         title="Watch clip"
@@ -158,6 +191,32 @@ export default function VideoPicksDetail() {
           </table>
         </div>
       </div>
+
+      {notesModal && (
+        <div className="transcript-overlay" onClick={() => setNotesModal(null)}>
+          <div className="transcript-modal" onClick={e => e.stopPropagation()}>
+            <div className="transcript-modal__header">
+              <div className="transcript-modal__title-group">
+                <h2 className="transcript-modal__title">{notesModal.symbol} — Notes</h2>
+                <span className="transcript-modal__meta">
+                  {notesModal.notes.length} mention{notesModal.notes.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <button className="transcript-modal__close" onClick={() => setNotesModal(null)}>✕</button>
+            </div>
+            <div className="transcript-modal__body">
+              {notesModal.notes.map((note, i) => (
+                <div key={i} className="picks-notes-modal__item">
+                  {notesModal.notes.length > 1 && (
+                    <span className="picks-notes-modal__index">{i + 1}</span>
+                  )}
+                  <p className="picks-notes-modal__text">{note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 }
