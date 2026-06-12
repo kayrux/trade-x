@@ -29,7 +29,7 @@ async function runPipeline(video) {
   );
 
   const formatted = formatForLLM(transcript.segments);
-  const mentions = await extractPicks(formatted);
+  const { general_summary, mentions } = await extractPicks(formatted);
 
   for (const m of mentions) {
     const { symbolId, symbolTicker, resolutionStatus } = await resolveSymbol(
@@ -70,8 +70,8 @@ async function runPipeline(video) {
   }
 
   await pool.query(
-    `UPDATE videos SET status = 'done', processed_at = NOW() WHERE id = $1`,
-    [video.id],
+    `UPDATE videos SET status = 'done', processed_at = NOW(), general_summary = $1 WHERE id = $2`,
+    [general_summary, video.id],
   );
 }
 

@@ -6,20 +6,23 @@ function getClient() {
   return _genAI;
 }
 
-const EXTRACTION_PROMPT = `You are analyzing a YouTube video transcript to extract stock ticker mentions.
+const EXTRACTION_PROMPT = `You are analyzing a YouTube video transcript to extract stock ticker mentions and general market commentary.
 
 Rules:
 - Only extract tickers that are EXPLICITLY stated or are completely unambiguous from context.
 - Do NOT guess tickers from company names alone unless the ticker was actually spoken.
-- Do NOT hallucinate — return an empty array if no specific stocks are discussed.
-- For each mention, capture the company name as spoken, the ticker symbol, sentiment expressed, and the YouTuber's reasoning/notes.
+- Do NOT hallucinate — return an empty mentions array if no specific stocks are discussed.
+- For each mention, capture the company name as spoken, the ticker symbol, sentiment expressed, and detailed notes.
 - sentiment must be exactly one of: bullish, bearish, neutral
 - conviction must be exactly one of: low, medium, high — or null if not expressed
 - price_target is a number if mentioned, otherwise null
 - timestamp_seconds is the approximate video time (in seconds) of the first mention
+- notes must be detailed: include the specific catalysts, price levels, support/resistance zones, risks, comparisons, or earnings details the YouTuber actually discussed. Write 2–5 sentences. Do NOT write a vague one-liner.
+- general_summary captures everything the YouTuber said about the broader market, macro events, or topics not tied to a specific stock (e.g. Fed policy, CPI data, inflation, interest rates, geopolitical events, tariffs, sector rotations, market sentiment). Write 2–5 sentences covering all macro themes discussed. If the video has no general market commentary, return null.
 
 Return ONLY valid JSON in this exact shape:
 {
+  "general_summary": "string | null",
   "mentions": [
     {
       "company_name": "string",
@@ -27,7 +30,7 @@ Return ONLY valid JSON in this exact shape:
       "sentiment": "bullish|bearish|neutral",
       "conviction": "low|medium|high|null",
       "price_target": number|null,
-      "notes": "string summarizing what was said",
+      "notes": "detailed notes on what was said about this stock",
       "timestamp_seconds": number
     }
   ]
@@ -50,11 +53,14 @@ async function extractPicks(formattedTranscript) {
     const raw = result.response.text();
 
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed?.mentions)) return [];
+    if (!Array.isArray(parsed?.mentions)) return { general_summary: null, mentions: [] };
 
-    return parsed.mentions.filter(
-      (m) => m && typeof m.ticker === "string" && m.ticker.trim().length > 0,
-    );
+    return {
+      general_summary: parsed.general_summary || null,
+      mentions: parsed.mentions.filter(
+        (m) => m && typeof m.ticker === "string" && m.ticker.trim().length > 0,
+      ),
+    };
   } catch (err) {
     console.error("Gemini extraction failed:", err.message);
     throw err;

@@ -45,6 +45,7 @@ router.get('/', async (req, res) => {
           p.conviction,
           p.price_target,
           p.notes,
+          v.general_summary,
           p.video_timestamp_seconds,
           p.price_at_mention,
           p.price_at_mention_source,

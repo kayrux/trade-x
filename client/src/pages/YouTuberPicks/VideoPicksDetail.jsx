@@ -86,6 +86,7 @@ export default function VideoPicksDetail() {
   const channelName = navState.channelName || firstPick?.youtuber_name || '';
   const youtubeVideoId = navState.youtubeVideoId || firstPick?.youtube_video_id || '';
   const publishedAt = firstPick?.published_at;
+  const generalSummary = firstPick?.general_summary || null;
 
   return (
     <PageLayout>
@@ -118,6 +119,13 @@ export default function VideoPicksDetail() {
 
         {error && (
           <div className="picks-page__error">Failed to load picks: {error}</div>
+        )}
+
+        {generalSummary && (
+          <div className="picks-general-summary">
+            <h2 className="picks-general-summary__title">Market Overview</h2>
+            <p className="picks-general-summary__text">{generalSummary}</p>
+          </div>
         )}
 
         <div className="picks-table-wrapper">
