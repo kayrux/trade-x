@@ -6,31 +6,62 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // Resolves a raw ticker + company name against the symbols table.
 // Returns { symbolId, symbolTicker, resolutionStatus }
+function pickRow(row) {
+  return { symbolId: row.id, symbolTicker: row.symbol, resolutionStatus: 'resolved' };
+}
+
 async function resolveSymbol(rawTicker, rawCompanyName) {
   const ticker = (rawTicker || '').toUpperCase().trim();
-  if (!ticker) return { symbolId: null, symbolTicker: null, resolutionStatus: 'unmatched' };
+  const company = (rawCompanyName || '').trim();
+  let ambiguous = false;
 
-  // Exact match first
-  const exact = await pool.query(
-    'SELECT id, symbol FROM symbols WHERE symbol = $1 LIMIT 1',
-    [ticker],
-  );
-  if (exact.rows.length === 1) {
-    return { symbolId: exact.rows[0].id, symbolTicker: exact.rows[0].symbol, resolutionStatus: 'resolved' };
+  // 1. Exact ticker match — unambiguous, highest confidence
+  if (ticker) {
+    const { rows } = await pool.query(
+      'SELECT id, symbol FROM symbols WHERE symbol = $1 LIMIT 1',
+      [ticker],
+    );
+    if (rows.length === 1) return pickRow(rows[0]);
   }
 
-  // Prefix match — if exactly one result, accept it
-  const prefix = await pool.query(
-    "SELECT id, symbol FROM symbols WHERE symbol LIKE $1 || '%' LIMIT 2",
-    [ticker],
-  );
-  if (prefix.rows.length === 1) {
-    return { symbolId: prefix.rows[0].id, symbolTicker: prefix.rows[0].symbol, resolutionStatus: 'resolved' };
+  // 2 & 3. Company name matching — promoted above ticker prefix; more reliable signal
+  if (company) {
+    const nameExact = await pool.query(
+      'SELECT id, symbol FROM symbols WHERE name ILIKE $1 LIMIT 2',
+      [company],
+    );
+    if (nameExact.rows.length === 1) return pickRow(nameExact.rows[0]);
+    if (nameExact.rows.length > 1) {
+      const hit = ticker ? nameExact.rows.find(r => r.symbol === ticker) : null;
+      if (hit) return pickRow(hit);
+      ambiguous = true;
+    }
+
+    if (!ambiguous) {
+      const namePrefix = await pool.query(
+        "SELECT id, symbol FROM symbols WHERE name ILIKE $1 || '%' LIMIT 2",
+        [company],
+      );
+      if (namePrefix.rows.length === 1) return pickRow(namePrefix.rows[0]);
+      if (namePrefix.rows.length > 1) {
+        const hit = ticker ? namePrefix.rows.find(r => r.symbol === ticker) : null;
+        if (hit) return pickRow(hit);
+        ambiguous = true;
+      }
+    }
   }
 
-  // No match or ambiguous
-  const status = prefix.rows.length === 0 ? 'unmatched' : 'needs_review';
-  return { symbolId: null, symbolTicker: null, resolutionStatus: status };
+  // 4. Ticker prefix match — last resort
+  if (ticker && !ambiguous) {
+    const { rows } = await pool.query(
+      "SELECT id, symbol FROM symbols WHERE symbol LIKE $1 || '%' LIMIT 2",
+      [ticker],
+    );
+    if (rows.length === 1) return pickRow(rows[0]);
+    if (rows.length > 1) ambiguous = true;
+  }
+
+  return { symbolId: null, symbolTicker: null, resolutionStatus: ambiguous ? 'needs_review' : 'unmatched' };
 }
 
 // Returns { price, source } for a resolved symbol at the time of the video.

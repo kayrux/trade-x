@@ -9,9 +9,9 @@ function getClient() {
 const EXTRACTION_PROMPT = `You are analyzing a YouTube video transcript to extract stock ticker mentions and general market commentary.
 
 Rules:
-- Only extract tickers that are EXPLICITLY stated or are completely unambiguous from context.
-- Do NOT guess tickers from company names alone unless the ticker was actually spoken.
-- Do NOT hallucinate — return an empty mentions array if no specific stocks are discussed.
+- Extract picks when the company name is clearly stated and identifiable (e.g. Apple, Tesla, Nvidia, Microsoft), even if the exact ticker was not spoken.
+- Provide your best guess at the ticker — it will be validated against a symbol database, so correctness matters but an honest attempt is fine.
+- Do NOT hallucinate obscure or ambiguous companies — only include a pick if you are confident in the company identity. Return an empty mentions array if no specific stocks are discussed.
 - For each mention, capture the company name as spoken, the ticker symbol, sentiment expressed, and detailed notes.
 - sentiment must be exactly one of: bullish, bearish, neutral
 - conviction must be exactly one of: low, medium, high — or null if not expressed
