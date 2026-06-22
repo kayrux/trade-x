@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { resolveUploadsPlaylistId } = require('../lib/youtubeClient');
-const { processChannel, runPipeline } = require('../jobs/syncVideos');
+const { processChannel, runPipeline, resyncAllChannels } = require('../jobs/syncVideos');
 const { fetchTranscript, formatForLLM } = require('../lib/transcriptFetcher');
 const { extractPicksDebug } = require('../lib/geminiExtractor');
 
@@ -190,6 +190,17 @@ router.get('/videos', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Database error' });
   }
+});
+
+// POST /channels/sync — manually trigger a 7-day resync for all (or one) active channel(s)
+router.post('/sync', (req, res) => {
+  const { channel_id } = req.body;
+  res.status(202).json({ message: 'Resync started' });
+  setImmediate(() =>
+    resyncAllChannels(channel_id || null).catch((err) =>
+      console.error('[channels] Manual resync failed:', err.message),
+    ),
+  );
 });
 
 // GET /channels — list all tracked channels

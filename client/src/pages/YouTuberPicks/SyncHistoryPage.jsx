@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ScrollText, Brain } from 'lucide-react';
+import { ArrowLeft, ScrollText, Brain, RefreshCw } from 'lucide-react';
 import PageLayout from '../../components/layouts/PageLayout/PageLayout';
 import { useSyncHistory } from '../../hooks/useSyncHistory';
-import { fetchChannels, fetchVideoTranscript, processVideo } from '../../lib/api/picks';
+import { fetchChannels, fetchVideoTranscript, processVideo, resyncChannels } from '../../lib/api/picks';
 import './YouTuberPicks.css';
 
 function formatDate(iso) {
@@ -59,6 +59,19 @@ export default function SyncHistoryPage() {
     ? channels.find(c => c.id === channelFilter)?.last_checked_at
     : channels.reduce((latest, c) => (!latest || c.last_checked_at > latest) ? c.last_checked_at : latest, null);
 
+  const [resyncState, setResyncState] = useState({ loading: false, done: false, error: null });
+
+  async function handleResync() {
+    setResyncState({ loading: true, done: false, error: null });
+    try {
+      await resyncChannels(channelFilter || null);
+      setResyncState({ loading: false, done: true, error: null });
+      refreshSyncHistory();
+    } catch (err) {
+      setResyncState({ loading: false, done: false, error: err.message });
+    }
+  }
+
   const [picksModal, setPicksModal] = useState(null);
 
   const [geminiModal, setGeminiModal] = useState(null);
@@ -102,7 +115,28 @@ export default function SyncHistoryPage() {
               Last 50 videos from the sync pipeline.{channelFilter ? ' Filtered to selected channel.' : ' All channels.'}
             </p>
           </div>
+          <div className="picks-header-actions">
+            <button
+              className="sync-resync-btn"
+              onClick={handleResync}
+              disabled={resyncState.loading}
+              title="Fetch latest videos from the last 7 days"
+            >
+              <RefreshCw size={14} className={resyncState.loading ? 'spin' : ''} />
+              {resyncState.loading ? 'Syncing…' : 'Resync Last 7 Days'}
+            </button>
+          </div>
         </div>
+        {resyncState.done && (
+          <p className="sync-resync-feedback sync-resync-feedback--ok">
+            Sync started in background — refresh in a moment to see new videos.
+          </p>
+        )}
+        {resyncState.error && (
+          <p className="sync-resync-feedback sync-resync-feedback--error">
+            Resync failed: {resyncState.error}
+          </p>
+        )}
 
         <div className="picks-filters">
           <select

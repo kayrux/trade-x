@@ -76,8 +76,8 @@ async function runPipeline(video) {
 }
 
 // Discovers and processes new videos for one channel.
-async function processChannel(channel) {
-  const since = channel.last_checked_at ? new Date(channel.last_checked_at) : sevenDaysAgo();
+async function processChannel(channel, sinceOverride = null) {
+  const since = sinceOverride || (channel.last_checked_at ? new Date(channel.last_checked_at) : sevenDaysAgo());
   console.log(`[syncVideos] Checking channel "${channel.name}" since ${since.toISOString()}`);
 
   let newVideos;
@@ -144,6 +144,18 @@ async function processChannel(channel) {
   );
 }
 
+// Manual resync — forces a 7-day lookback regardless of last_checked_at.
+async function resyncAllChannels(channelId = null) {
+  const since = sevenDaysAgo();
+  const query = channelId
+    ? `SELECT * FROM tracked_channels WHERE is_active = TRUE AND id = $1`
+    : `SELECT * FROM tracked_channels WHERE is_active = TRUE`;
+  const { rows } = await pool.query(query, channelId ? [channelId] : []);
+  for (const channel of rows) {
+    await processChannel(channel, since);
+  }
+}
+
 // Hourly cron target — processes all active channels.
 async function syncAllChannels() {
   console.log('[syncVideos] Running hourly channel sync...');
@@ -159,4 +171,4 @@ async function syncAllChannels() {
   }
 }
 
-module.exports = { syncAllChannels, processChannel, runPipeline };
+module.exports = { syncAllChannels, resyncAllChannels, processChannel, runPipeline };

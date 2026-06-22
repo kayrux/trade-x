@@ -44,6 +44,16 @@ export async function fetchVideoTranscript(videoId) {
   return res.json();
 }
 
+export async function resyncChannels(channelId = null) {
+  const res = await fetch(`${API_BASE_URL}/channels/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(channelId ? { channel_id: channelId } : {}),
+  });
+  if (!res.ok) throw new Error(`Resync failed: ${res.status}`);
+  return res.json();
+}
+
 export async function fetchSyncHistory({ channelId } = {}) {
   const params = new URLSearchParams();
   if (channelId) params.set('channel_id', channelId);
