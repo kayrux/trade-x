@@ -7,6 +7,13 @@ import './SymbolChart.css';
 const RESOLUTIONS = ['Daily', 'Weekly', 'Monthly'];
 const RANGES = ['5D', '1M', '3M', 'YTD', '1Y', '5Y', 'Max'];
 
+// Today's date in US market time (America/New_York), formatted YYYY-MM-DD.
+// Using UTC here would roll into the next calendar day on US evenings and
+// append a phantom next-day (e.g. Saturday) candle. en-CA formats as YYYY-MM-DD.
+function marketDateStr(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(date);
+}
+
 
 function SymbolChart({ symbol, quote }) {
   const [activeMode, setActiveMode] = useState('range');
@@ -29,8 +36,12 @@ function SymbolChart({ symbol, quote }) {
   const candlesWithToday = useMemo(() => {
     if (!candles.length || !quote || quote.symbol !== symbol) return candles;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const lastDate = new Date(candles[candles.length - 1].ts).toISOString().split('T')[0];
+    const todayStr = marketDateStr();
+    // No session on weekends — don't append a phantom Sat/Sun candle.
+    const dow = new Date(`${todayStr}T00:00:00Z`).getUTCDay(); // 0=Sun, 6=Sat
+    if (dow === 0 || dow === 6) return candles;
+
+    const lastDate = candles[candles.length - 1].ts.split('T')[0];
     if (lastDate >= todayStr) return candles;
 
     if (quote.price_source === 'live') {

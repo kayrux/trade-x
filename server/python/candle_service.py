@@ -38,6 +38,7 @@ app = FastAPI()
 RETRY_ATTEMPTS = 3
 RETRY_DELAYS = [4, 16, 64]   # seconds between attempts
 THROTTLE_SLEEP = 0.5         # seconds after each successful fetch
+EXCHANGE_TZ = "America/New_York"   # US market timezone for session-date labelling
 
 
 def _yahoo_ticker(symbol: str) -> str:
@@ -85,12 +86,34 @@ def _df_to_candles(df: pd.DataFrame, symbol: str) -> list[dict]:
     # Normalise column names to lowercase
     df.columns = [c.lower().replace(" ", "_") for c in df.columns]
 
+    # Normalise the index to the exchange timezone so each bar's date is its
+    # true session date. Without this, yfinance's still-forming current-day
+    # bar can be labelled with the next calendar day (e.g. a phantom Saturday
+    # bar copying Friday's values). yfinance daily indexes are usually
+    # tz-aware (America/New_York); handle the naive case too.
+    if isinstance(df.index, pd.DatetimeIndex):
+        if df.index.tz is None:
+            df.index = df.index.tz_localize(EXCHANGE_TZ)
+        else:
+            df.index = df.index.tz_convert(EXCHANGE_TZ)
+
     # Drop rows where all OHLCV columns are NaN (non-trading days / data gaps)
     ohlcv_cols = [c for c in ["open", "high", "low", "close", "volume"] if c in df.columns]
     df = df.dropna(subset=ohlcv_cols, how="all")
 
+    today = date.today()
+
     candles = []
     for ts, row in df.iterrows():
+        # Skip non-session rows: weekends are always spurious (market closed),
+        # and any bar dated today-or-later is the in-progress / future bar that
+        # yfinance may return with provisional values. Completed sessions are
+        # picked up on a later day's sync.
+        if hasattr(ts, "weekday") and ts.weekday() >= 5:
+            continue
+        if hasattr(ts, "date") and ts.date() >= today:
+            continue
+
         date_str = ts.strftime("%Y-%m-%d")
         candles.append({
             "date":           date_str,

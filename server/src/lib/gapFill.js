@@ -16,13 +16,28 @@ function yearsAgo(n) {
 }
 
 /**
- * Most recent weekday on or before today (heuristic — no holiday calendar).
+ * Format a Date as its America/New_York calendar date (YYYY-MM-DD).
+ * Using the market timezone keeps the fetch window from rolling into the next
+ * calendar day on US evenings, which otherwise causes yfinance to return a
+ * phantom next-day (weekend) bar. en-CA formats as YYYY-MM-DD.
+ */
+function toMarketDateStr(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+  }).format(date);
+}
+
+/**
+ * Most recent weekday on or before today, in US market time
+ * (heuristic — no holiday calendar). Returns a Date at UTC midnight of that
+ * session date, matching how candle timestamps are stored.
  */
 function lastTradingDay() {
-  const d = new Date();
-  const dow = d.getDay(); // 0=Sun, 6=Sat
-  if (dow === 0) d.setDate(d.getDate() - 2);
-  else if (dow === 6) d.setDate(d.getDate() - 1);
+  const marketDate = toMarketDateStr(); // YYYY-MM-DD in America/New_York
+  const d = new Date(`${marketDate}T00:00:00Z`);
+  const dow = d.getUTCDay(); // 0=Sun, 6=Sat
+  if (dow === 0) d.setUTCDate(d.getUTCDate() - 2);
+  else if (dow === 6) d.setUTCDate(d.getUTCDate() - 1);
   return d;
 }
 
@@ -129,7 +144,7 @@ async function ensureCoverage(symbolId, symbol) {
   // ── Case A: never fetched ──────────────────────────────────────────────────
   if (!coverage) {
     const start = effectiveStart(targetStart);
-    const candles = await fetchFromService(symbol, toDateStr(start), toDateStr(today));
+    const candles = await fetchFromService(symbol, toDateStr(start), toMarketDateStr(today));
     await upsertCandles(symbolId, candles);
 
     const dates = candles.map((c) => c.date).sort();
@@ -197,7 +212,7 @@ async function ensureCoverage(symbolId, symbol) {
   // ── Case C: forward gap ───────────────────────────────────────────────────
   if (!latestTs || latestTs < freshCutoff) {
     const gapStart = latestTs ? addDays(toDateStr(latestTs), 1) : toDateStr(targetStart);
-    const candles = await fetchFromService(symbol, gapStart, toDateStr(today));
+    const candles = await fetchFromService(symbol, gapStart, toMarketDateStr(today));
     await upsertCandles(symbolId, candles);
 
     if (candles.length) {
