@@ -22,6 +22,16 @@ import yfinance as yf
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import (
+    TranscriptsDisabled,
+    NoTranscriptFound,
+    VideoUnavailable,
+    VideoUnplayable,
+    IpBlocked,
+    RequestBlocked,
+    AgeRestricted,
+)
 
 app = FastAPI()
 
@@ -123,6 +133,60 @@ def get_candles(
     time.sleep(THROTTLE_SLEEP)
 
     return {"symbol": symbol.upper(), "candles": candles}
+
+
+@app.get("/transcript")
+def get_transcript(
+    video_id: str = Query(..., description="YouTube video id, e.g. dQw4w9WgXcQ"),
+):
+    """Fetch a video transcript via youtube-transcript-api.
+
+    Response (always 200 unless a hard error):
+        success:  { "available": True,  "text": str,  "segments": [{text, offset, duration}] }
+        failure:  { "available": False, "text": None, "segments": [], "reason": str }
+    Prefers English; falls back to the first available transcript so
+    non-English / auto-generated captions still work.
+    """
+    ytt = YouTubeTranscriptApi()
+
+    def unavailable(reason: str):
+        print(f"[transcript] {video_id} unavailable: {reason}")
+        return {"available": False, "text": None, "segments": [], "reason": reason}
+
+    try:
+        try:
+            fetched = ytt.fetch(video_id, languages=["en", "en-US"])
+        except NoTranscriptFound:
+            # Fall back to whatever transcript the video does have.
+            transcript_list = ytt.list(video_id)
+            first = next(iter(transcript_list), None)
+            if first is None:
+                raise
+            fetched = first.fetch()
+    except TranscriptsDisabled:
+        return unavailable("transcripts_disabled")
+    except NoTranscriptFound:
+        return unavailable("no_transcript_found")
+    except (VideoUnavailable, VideoUnplayable):
+        return unavailable("video_unavailable")
+    except (IpBlocked, RequestBlocked):
+        return unavailable("ip_blocked")
+    except AgeRestricted:
+        return unavailable("age_restricted")
+    except Exception as exc:
+        print(f"[transcript] {video_id} error: {exc}")
+        return unavailable("error")
+
+    segments = [
+        {"text": s.text, "offset": s.start, "duration": s.duration}
+        for s in fetched
+    ]
+    if not segments:
+        return unavailable("empty")
+
+    text = " ".join(s["text"] for s in segments)
+    print(f"[transcript] {video_id} OK ({len(segments)} segments)")
+    return {"available": True, "text": text, "segments": segments}
 
 
 @app.get("/health")

@@ -1,17 +1,32 @@
-const { YoutubeTranscript } = require('youtube-transcript');
+const axios = require('axios');
+
+// Transcripts are fetched by the Python youtube-transcript-api service
+// (same FastAPI app as the candle service — see gapFill.js).
+const PYTHON_SERVICE_URL =
+  process.env.PYTHON_SERVICE_URL ||
+  process.env.CANDLE_SERVICE_URL ||
+  'http://localhost:5001';
 
 // Returns { text, segments } or null if captions are unavailable.
 // segments: [{ text, offset, duration }] where offset/duration are in seconds.
 async function fetchTranscript(youtubeVideoId) {
+  let data;
   try {
-    const segments = await YoutubeTranscript.fetchTranscript(youtubeVideoId, { lang: 'en' });
-    if (!segments || segments.length === 0) return null;
-
-    const text = segments.map((s) => s.text).join(' ');
-    return { text, segments };
-  } catch {
-    return null;
+    ({ data } = await axios.get(`${PYTHON_SERVICE_URL}/transcript`, {
+      params: { video_id: youtubeVideoId },
+      timeout: 60_000,
+    }));
+  } catch (err) {
+    // Service down / timeout / 5xx — transient, must NOT be recorded as "no captions".
+    console.error('[transcriptFetcher] transcript service error:', youtubeVideoId, err.message);
+    throw new Error(`transcript service unreachable: ${err.message}`);
   }
+
+  if (!data || !data.available || !data.segments?.length) {
+    console.warn('[transcriptFetcher] no transcript:', youtubeVideoId, data?.reason || 'unknown');
+    return null; // genuine no-captions
+  }
+  return { text: data.text, segments: data.segments };
 }
 
 // Formats transcript segments into a timestamped string for the LLM.

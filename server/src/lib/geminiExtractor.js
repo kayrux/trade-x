@@ -6,6 +6,36 @@ function getClient() {
   return _genAI;
 }
 
+const RETRY_DELAYS_MS = [4000, 16000, 32000]; // backoff between attempts on transient errors
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// True for transient, retryable Gemini failures (overloaded / rate limited / timeout).
+function isTransientGeminiError(err) {
+  const msg = err?.message || "";
+  return /\b(429|500|502|503|504)\b/.test(msg) || /timed out|timeout|overloaded|high demand|unavailable/i.test(msg);
+}
+
+// Calls the model with exponential backoff on transient (503/timeout/rate-limit) errors.
+async function generateWithRetry(model, prompt) {
+  let lastErr;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await model.generateContent(prompt);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < RETRY_DELAYS_MS.length && isTransientGeminiError(err)) {
+        const delay = RETRY_DELAYS_MS[attempt];
+        console.warn(`Gemini transient error (attempt ${attempt + 1}), retrying in ${delay}ms:`, err.message);
+        await sleep(delay);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
 const EXTRACTION_PROMPT = `You are analyzing a YouTube video transcript to extract stock ticker mentions and general market commentary.
 
 Rules:
@@ -47,9 +77,7 @@ async function extractPicks(formattedTranscript) {
       generationConfig: { responseMimeType: "application/json" },
     });
 
-    const result = await model.generateContent(
-      EXTRACTION_PROMPT + formattedTranscript,
-    );
+    const result = await generateWithRetry(model, EXTRACTION_PROMPT + formattedTranscript);
     const raw = result.response.text();
 
     const parsed = JSON.parse(raw);
@@ -73,9 +101,7 @@ async function extractPicksDebug(formattedTranscript) {
       model: "gemini-2.5-flash-lite",
       generationConfig: { responseMimeType: "application/json" },
     });
-    const result = await model.generateContent(
-      EXTRACTION_PROMPT + formattedTranscript,
-    );
+    const result = await generateWithRetry(model, EXTRACTION_PROMPT + formattedTranscript);
     const rawText = result.response.text();
     let parsed = null;
     let parseError = null;

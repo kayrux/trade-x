@@ -103,7 +103,12 @@ router.get('/videos/:id/extract-debug', async (req, res) => {
     return res.status(500).json({ error: 'Database error' });
   }
 
-  const transcript = await fetchTranscript(youtubeVideoId);
+  let transcript;
+  try {
+    transcript = await fetchTranscript(youtubeVideoId);
+  } catch (err) {
+    return res.status(503).json({ serviceError: true, error: err.message });
+  }
   if (!transcript) {
     return res.json({ transcriptAvailable: false, gemini: null });
   }
@@ -134,7 +139,12 @@ router.get('/videos/:id/transcript', async (req, res) => {
     return res.status(500).json({ error: 'Database error' });
   }
 
-  const transcript = await fetchTranscript(youtubeVideoId);
+  let transcript;
+  try {
+    transcript = await fetchTranscript(youtubeVideoId);
+  } catch (err) {
+    return res.status(503).json({ available: false, serviceError: true, error: err.message });
+  }
   if (!transcript) {
     return res.json({ available: false, text: null, segmentCount: 0 });
   }

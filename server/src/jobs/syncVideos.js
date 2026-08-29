@@ -4,6 +4,11 @@ const { fetchTranscript, formatForLLM } = require('../lib/transcriptFetcher');
 const { extractPicks } = require('../lib/geminiExtractor');
 const { resolveSymbol, getPriceAtMention } = require('../lib/picksValidator');
 
+// Pause between videos so we don't burst YouTube (transcript IP-blocking) or Gemini.
+const THROTTLE_BETWEEN_VIDEOS_MS = 3000;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 function sevenDaysAgo() {
   const d = new Date();
   d.setDate(d.getDate() - 7);
@@ -76,7 +81,9 @@ async function runPipeline(video) {
 }
 
 // Discovers and processes new videos for one channel.
-async function processChannel(channel, sinceOverride = null) {
+// retryFailed re-attempts previously failed videos — MANUAL syncs only, so the
+// automatic hourly cron never re-hammers YouTube (avoids transcript IP blocks).
+async function processChannel(channel, sinceOverride = null, retryFailed = false) {
   const since = sinceOverride || (channel.last_checked_at ? new Date(channel.last_checked_at) : sevenDaysAgo());
   console.log(`[syncVideos] Checking channel "${channel.name}" since ${since.toISOString()}`);
 
@@ -109,24 +116,29 @@ async function processChannel(channel, sinceOverride = null) {
     });
   }
 
-  // Also retry any previously failed videos for this channel
-  const { rows: failedRows } = await pool.query(
-    `SELECT id, youtube_video_id, published_at FROM videos
-     WHERE channel_id = $1 AND status = 'failed'`,
-    [channel.id],
-  );
-
-  if (failedRows.length > 0) {
-    console.log(`[syncVideos] Retrying ${failedRows.length} failed video(s) for "${channel.name}"`);
-    await pool.query(
-      `UPDATE videos SET status = 'discovered', transcript_status = NULL, error_detail = NULL
+  // Retry previously failed videos — manual syncs only. The automatic cron skips
+  // this so it never re-fetches transcripts in bulk and re-triggers an IP block.
+  if (retryFailed) {
+    const { rows: failedRows } = await pool.query(
+      `SELECT id, youtube_video_id, published_at FROM videos
        WHERE channel_id = $1 AND status = 'failed'`,
       [channel.id],
     );
-    videosToProcess.push(...failedRows);
+
+    if (failedRows.length > 0) {
+      console.log(`[syncVideos] Retrying ${failedRows.length} failed video(s) for "${channel.name}"`);
+      await pool.query(
+        `UPDATE videos SET status = 'discovered', transcript_status = NULL, error_detail = NULL
+         WHERE channel_id = $1 AND status = 'failed'`,
+        [channel.id],
+      );
+      videosToProcess.push(...failedRows);
+    }
   }
 
-  for (const video of videosToProcess) {
+  for (let i = 0; i < videosToProcess.length; i++) {
+    const video = videosToProcess[i];
+    if (i > 0) await sleep(THROTTLE_BETWEEN_VIDEOS_MS);
     try {
       await runPipeline(video);
     } catch (err) {
@@ -152,7 +164,7 @@ async function resyncAllChannels(channelId = null) {
     : `SELECT * FROM tracked_channels WHERE is_active = TRUE`;
   const { rows } = await pool.query(query, channelId ? [channelId] : []);
   for (const channel of rows) {
-    await processChannel(channel, since);
+    await processChannel(channel, since, true); // manual → retry failed videos
   }
 }
 
