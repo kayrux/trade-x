@@ -13,6 +13,7 @@ Response (always 200 unless a hard error):
 """
 
 import asyncio
+import math
 import time
 from datetime import date
 from typing import Optional
@@ -21,6 +22,16 @@ import yfinance as yf
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import (
+    TranscriptsDisabled,
+    NoTranscriptFound,
+    VideoUnavailable,
+    VideoUnplayable,
+    IpBlocked,
+    RequestBlocked,
+    AgeRestricted,
+)
 
 app = FastAPI()
 
@@ -59,6 +70,14 @@ def _fetch_with_retry(ticker: str, start: str, end: str) -> pd.DataFrame:
     raise last_exc
 
 
+def _safe_float(val, default=0.0) -> float:
+    try:
+        f = float(val)
+        return default if (math.isnan(f) or math.isinf(f)) else f
+    except (TypeError, ValueError):
+        return default
+
+
 def _df_to_candles(df: pd.DataFrame, symbol: str) -> list[dict]:
     if df is None or df.empty:
         return []
@@ -66,18 +85,21 @@ def _df_to_candles(df: pd.DataFrame, symbol: str) -> list[dict]:
     # Normalise column names to lowercase
     df.columns = [c.lower().replace(" ", "_") for c in df.columns]
 
+    # Drop rows where all OHLCV columns are NaN (non-trading days / data gaps)
+    ohlcv_cols = [c for c in ["open", "high", "low", "close", "volume"] if c in df.columns]
+    df = df.dropna(subset=ohlcv_cols, how="all")
+
     candles = []
     for ts, row in df.iterrows():
-        # ts is a pandas Timestamp; format as YYYY-MM-DD
         date_str = ts.strftime("%Y-%m-%d")
         candles.append({
-            "date":          date_str,
-            "open":          float(row.get("open",  0) or 0),
-            "high":          float(row.get("high",  0) or 0),
-            "low":           float(row.get("low",   0) or 0),
-            "close":         float(row.get("close", 0) or 0),
-            "adjusted_close": float(row.get("adj_close", 0) or 0),
-            "volume":        int(row.get("volume",  0) or 0),
+            "date":           date_str,
+            "open":           _safe_float(row.get("open")),
+            "high":           _safe_float(row.get("high")),
+            "low":            _safe_float(row.get("low")),
+            "close":          _safe_float(row.get("close")),
+            "adjusted_close": _safe_float(row.get("adj_close")),
+            "volume":         int(_safe_float(row.get("volume"))),
         })
     return candles
 
@@ -111,6 +133,60 @@ def get_candles(
     time.sleep(THROTTLE_SLEEP)
 
     return {"symbol": symbol.upper(), "candles": candles}
+
+
+@app.get("/transcript")
+def get_transcript(
+    video_id: str = Query(..., description="YouTube video id, e.g. dQw4w9WgXcQ"),
+):
+    """Fetch a video transcript via youtube-transcript-api.
+
+    Response (always 200 unless a hard error):
+        success:  { "available": True,  "text": str,  "segments": [{text, offset, duration}] }
+        failure:  { "available": False, "text": None, "segments": [], "reason": str }
+    Prefers English; falls back to the first available transcript so
+    non-English / auto-generated captions still work.
+    """
+    ytt = YouTubeTranscriptApi()
+
+    def unavailable(reason: str):
+        print(f"[transcript] {video_id} unavailable: {reason}")
+        return {"available": False, "text": None, "segments": [], "reason": reason}
+
+    try:
+        try:
+            fetched = ytt.fetch(video_id, languages=["en", "en-US"])
+        except NoTranscriptFound:
+            # Fall back to whatever transcript the video does have.
+            transcript_list = ytt.list(video_id)
+            first = next(iter(transcript_list), None)
+            if first is None:
+                raise
+            fetched = first.fetch()
+    except TranscriptsDisabled:
+        return unavailable("transcripts_disabled")
+    except NoTranscriptFound:
+        return unavailable("no_transcript_found")
+    except (VideoUnavailable, VideoUnplayable):
+        return unavailable("video_unavailable")
+    except (IpBlocked, RequestBlocked):
+        return unavailable("ip_blocked")
+    except AgeRestricted:
+        return unavailable("age_restricted")
+    except Exception as exc:
+        print(f"[transcript] {video_id} error: {exc}")
+        return unavailable("error")
+
+    segments = [
+        {"text": s.text, "offset": s.start, "duration": s.duration}
+        for s in fetched
+    ]
+    if not segments:
+        return unavailable("empty")
+
+    text = " ".join(s["text"] for s in segments)
+    print(f"[transcript] {video_id} OK ({len(segments)} segments)")
+    return {"available": True, "text": text, "segments": segments}
 
 
 @app.get("/health")

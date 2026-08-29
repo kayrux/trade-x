@@ -63,6 +63,9 @@ function Navbar() {
         </div>
       </div>
       <div className="navbar__right">
+        <button className="navbar__nav-link" onClick={() => navigate('/picks')}>
+          Picks
+        </button>
         <button className="navbar__icon-btn" aria-label="Toggle theme" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
         </button>
