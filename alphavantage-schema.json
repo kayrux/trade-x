@@ -1,0 +1,1100 @@
+{
+  "schemaVersion": "1.0.0",
+  "info": {
+    "title": "Alpha Vantage API",
+    "version": "1.0.0",
+    "description": "Machine-readable reference schema for the Alpha Vantage stock/market-data API, derived from the official documentation. Unlike Finnhub (path-based), Alpha Vantage is function-dispatched: nearly every request goes to a single endpoint and selects the operation via the `function` query parameter. Operations here are keyed by that function value.",
+    "docsUrl": "https://www.alphavantage.co/documentation/"
+  },
+  "host": "www.alphavantage.co",
+  "basePath": "/query",
+  "schemes": ["https"],
+  "notes": {
+    "authentication": "All requests require an `apikey` query parameter, e.g. `apikey=<yourkey>`. The docs use `apikey=demo`, which only works for a small set of hard-coded example inputs (mostly symbol=IBM). Never read the real key from .env directly; grep source for process.env references to find its variable name.",
+    "requestModel": "Base URL is https://www.alphavantage.co/query. Select the operation with `function=<NAME>`. The Advanced Analytics endpoints are the exception: they live on host https://alphavantageapi.co under paths /timeseries/analytics and /timeseries/running_analytics.",
+    "rateLimit": "Free tier is typically 25 requests/day and 5 requests/minute (subject to change). Exceeding limits returns a JSON body with a 'Note' or 'Information' field rather than an HTTP error status. Premium plans (75-1200 req/min) unlock realtime data and endpoints flagged premium=true.",
+    "responseFormats": "Most endpoints accept `datatype=json` (default) or `datatype=csv`. LISTING_STATUS, EARNINGS_CALENDAR, and IPO_CALENDAR return CSV only. Numeric fields in JSON responses are frequently returned as strings.",
+    "errorHandling": "Errors return HTTP 200 with an explanatory field: `Error Message` (bad parameters), `Note` (rate limit / throttle), or `Information` (invalid/demo key usage). Always check for these keys before parsing data.",
+    "adjustedData": "All technical indicators are computed from split/dividend-adjusted series to avoid artificial jumps."
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "apikey",
+      "in": "query",
+      "required": true,
+      "description": "Alpha Vantage API key. Claim a free key at https://www.alphavantage.co/support/#api-key"
+    }
+  },
+  "commonParameters": {
+    "apikey": {
+      "in": "query",
+      "name": "apikey",
+      "required": true,
+      "type": "string",
+      "description": "Your Alpha Vantage API key."
+    },
+    "datatype": {
+      "in": "query",
+      "name": "datatype",
+      "required": false,
+      "type": "string",
+      "enum": ["json", "csv"],
+      "default": "json",
+      "description": "Response format. `json` returns JSON; `csv` returns a comma-separated file."
+    },
+    "symbol": {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "type": "string",
+      "description": "Equity ticker symbol, e.g. `IBM`, `AAPL`, or a suffixed international symbol like `TSCO.LON`, `SHOP.TRT`, `RELIANCE.BSE`."
+    },
+    "outputsize": {
+      "in": "query",
+      "name": "outputsize",
+      "required": false,
+      "type": "string",
+      "enum": ["compact", "full"],
+      "default": "compact",
+      "description": "`compact` returns the latest 100 data points; `full` returns the full-length series. For TIME_SERIES_DAILY, `full` requires a premium key."
+    },
+    "interval_intraday": {
+      "in": "query",
+      "name": "interval",
+      "required": true,
+      "type": "string",
+      "enum": ["1min", "5min", "15min", "30min", "60min"],
+      "description": "Intraday time interval between two consecutive data points."
+    },
+    "entitlement": {
+      "in": "query",
+      "name": "entitlement",
+      "required": false,
+      "type": "string",
+      "enum": ["realtime", "delayed"],
+      "description": "Controls data freshness during the US trading day. Unset = historical (end-of-day). `realtime` and `delayed` (15-min) require an eligible premium plan."
+    },
+    "month": {
+      "in": "query",
+      "name": "month",
+      "required": false,
+      "type": "string",
+      "format": "YYYY-MM",
+      "description": "Query a specific historical month, e.g. `2009-01`. Any month since 2000-01 is supported. Applies to intraday time series and technical indicators."
+    }
+  },
+  "technicalIndicatorSharedParameters": {
+    "description": "Parameter groups reused across the Technical Indicators category. Each indicator's `parameterGroups` field lists which of these apply, plus any indicator-specific `parameters`.",
+    "groups": {
+      "core": ["function", "symbol", "interval", "apikey"],
+      "interval": {
+        "in": "query",
+        "name": "interval",
+        "required": true,
+        "type": "string",
+        "enum": ["1min", "5min", "15min", "30min", "60min", "daily", "weekly", "monthly"],
+        "description": "Interval between two consecutive data points. Note: `symbol` may be an equity (IBM) or an FX/crypto pair (USDEUR)."
+      },
+      "time_period": {
+        "in": "query",
+        "name": "time_period",
+        "required": true,
+        "type": "integer",
+        "description": "Number of data points used to calculate each value, e.g. 10, 60, 200."
+      },
+      "series_type": {
+        "in": "query",
+        "name": "series_type",
+        "required": true,
+        "type": "string",
+        "enum": ["close", "open", "high", "low"],
+        "description": "Price type in the underlying time series."
+      },
+      "month": "See commonParameters.month",
+      "datatype": "See commonParameters.datatype",
+      "entitlement": "See commonParameters.entitlement",
+      "matype": {
+        "in": "query",
+        "name": "matype",
+        "required": false,
+        "type": "integer",
+        "enum": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        "default": 0,
+        "description": "Moving-average type: 0=SMA, 1=EMA, 2=WMA, 3=DEMA, 4=TEMA, 5=TRIMA, 6=T3, 7=KAMA, 8=MAMA."
+      }
+    }
+  },
+  "categories": [
+    "Core Time Series",
+    "Index Data",
+    "Options Data",
+    "Alpha Intelligence",
+    "Fundamental Data",
+    "Forex (FX)",
+    "Digital & Crypto Currencies",
+    "Commodities",
+    "Economic Indicators",
+    "Technical Indicators"
+  ],
+  "functions": {
+    "TIME_SERIES_INTRADAY": {
+      "category": "Core Time Series",
+      "summary": "Intraday OHLCV time series",
+      "premium": false,
+      "description": "Current and 20+ years of intraday OHLCV candles, covering pre/post-market hours where applicable. `outputsize=full` and the `month` history parameter make this effectively premium for deep history.",
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "interval", "required": true, "type": "string", "enum": ["1min", "5min", "15min", "30min", "60min"]},
+        {"name": "adjusted", "required": false, "type": "boolean", "default": true, "description": "Set false for raw as-traded values."},
+        {"name": "extended_hours", "required": false, "type": "boolean", "default": true, "description": "Set false for regular hours (09:30-16:00 ET) only."},
+        {"name": "month", "required": false, "type": "string", "format": "YYYY-MM"},
+        {"name": "outputsize", "required": false, "type": "string", "enum": ["compact", "full"], "default": "compact"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=demo",
+      "responseKeys": ["Meta Data", "Time Series (5min)"]
+    },
+    "TIME_SERIES_DAILY": {
+      "category": "Core Time Series",
+      "summary": "Raw daily OHLCV time series",
+      "premium": false,
+      "description": "Raw as-traded daily OHLCV, 20+ years. `outputsize=compact` (100 points) is free; `outputsize=full` requires premium.",
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "outputsize", "required": false, "type": "string", "enum": ["compact", "full"], "default": "compact", "description": "full requires premium"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo",
+      "responseKeys": ["Meta Data", "Time Series (Daily)"]
+    },
+    "TIME_SERIES_DAILY_ADJUSTED": {
+      "category": "Core Time Series",
+      "summary": "Daily OHLCV with adjusted close, splits & dividends",
+      "premium": true,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "outputsize", "required": false, "type": "string", "enum": ["compact", "full"], "default": "compact"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"},
+        {"name": "entitlement", "required": false, "type": "string", "enum": ["realtime", "delayed"]}
+      ],
+      "example": "/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=IBM&apikey=demo"
+    },
+    "TIME_SERIES_WEEKLY": {
+      "category": "Core Time Series",
+      "summary": "Weekly OHLCV time series",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=TIME_SERIES_WEEKLY&symbol=IBM&apikey=demo"
+    },
+    "TIME_SERIES_WEEKLY_ADJUSTED": {
+      "category": "Core Time Series",
+      "summary": "Weekly OHLCV with adjusted close and dividends",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol=IBM&apikey=demo"
+    },
+    "TIME_SERIES_MONTHLY": {
+      "category": "Core Time Series",
+      "summary": "Monthly OHLCV time series",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=TIME_SERIES_MONTHLY&symbol=IBM&apikey=demo"
+    },
+    "TIME_SERIES_MONTHLY_ADJUSTED": {
+      "category": "Core Time Series",
+      "summary": "Monthly OHLCV with adjusted close and dividends",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol=IBM&apikey=demo"
+    },
+    "GLOBAL_QUOTE": {
+      "category": "Core Time Series",
+      "summary": "Latest price & volume for one ticker (Quote Endpoint)",
+      "premium": false,
+      "description": "Latest price/volume snapshot for a single symbol. End-of-day by default; realtime/delayed require premium. For bulk, use REALTIME_BULK_QUOTES.",
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"},
+        {"name": "entitlement", "required": false, "type": "string", "enum": ["realtime", "delayed"]}
+      ],
+      "example": "/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=demo",
+      "responseKeys": ["Global Quote"]
+    },
+    "REALTIME_BULK_QUOTES": {
+      "category": "Core Time Series",
+      "summary": "Realtime quotes for up to 100 US symbols",
+      "premium": true,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string", "description": "Up to 100 comma-separated symbols, e.g. MSFT,AAPL,IBM."},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=REALTIME_BULK_QUOTES&symbol=MSFT,AAPL,IBM&apikey=demo"
+    },
+    "REALTIME_BULK_BID_ASK_PRICES": {
+      "category": "Core Time Series",
+      "summary": "Realtime top-of-book bid/ask for up to 100 US symbols",
+      "premium": true,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string", "description": "Up to 100 comma-separated symbols."},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=REALTIME_BULK_BID_ASK_PRICES&symbol=MSFT,AAPL,IBM&apikey=demo"
+    },
+    "SYMBOL_SEARCH": {
+      "category": "Core Time Series",
+      "summary": "Best-matching symbols for a keyword (autocomplete)",
+      "premium": false,
+      "description": "Returns best-matching symbols and market info with match scores, ideal for autocomplete search boxes.",
+      "parameters": [
+        {"name": "keywords", "required": true, "type": "string", "description": "Free text, e.g. `microsoft` or `BA`."},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=SYMBOL_SEARCH&keywords=tesco&apikey=demo",
+      "responseKeys": ["bestMatches"]
+    },
+    "MARKET_STATUS": {
+      "category": "Core Time Series",
+      "summary": "Open/closed status of global markets",
+      "premium": false,
+      "description": "Current open vs closed status of major equity, forex, and crypto trading venues worldwide.",
+      "parameters": [],
+      "example": "/query?function=MARKET_STATUS&apikey=demo",
+      "responseKeys": ["endpoint", "markets"]
+    },
+
+    "INDEX_DATA": {
+      "category": "Index Data",
+      "summary": "Daily/weekly/monthly OHLC for 200+ market indices",
+      "premium": true,
+      "description": "Decades of OHLC for major indices. Common symbols: DJI (Dow Jones), SPX (S&P 500), COMP (Nasdaq Composite), NDX (Nasdaq 100), VIX, RUT (Russell 2000), plus 200+ others (see INDEX_CATALOG).",
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string", "description": "Index symbol, e.g. DJI, SPX, COMP, NDX, VIX, RUT, DJS."},
+        {"name": "interval", "required": true, "type": "string", "enum": ["daily", "weekly", "monthly"]},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=INDEX_DATA&symbol=SPX&interval=weekly&apikey=demo"
+    },
+    "INDEX_CATALOG": {
+      "category": "Index Data",
+      "summary": "Full list of supported index symbols",
+      "premium": false,
+      "parameters": [
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=INDEX_CATALOG&apikey=demo"
+    },
+
+    "REALTIME_OPTIONS": {
+      "category": "Options Data",
+      "summary": "Realtime full option chain",
+      "premium": true,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "require_greeks", "required": false, "type": "boolean", "default": false, "description": "Include greeks & implied volatility."},
+        {"name": "contract", "required": false, "type": "string", "description": "Specific OCC contract ID, e.g. IBM270115C00390000."},
+        {"name": "expiration", "required": false, "type": "string", "format": "YYYY-MM-DD", "description": "Filter to one expiration on/after today."},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=REALTIME_OPTIONS&symbol=IBM&apikey=demo"
+    },
+    "REALTIME_PUT_CALL_RATIO": {
+      "category": "Options Data",
+      "summary": "Realtime put-call ratio (whole chain & per expiration)",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=REALTIME_PUT_CALL_RATIO&symbol=IBM&apikey=demo"
+    },
+    "REALTIME_VOLUME_OPEN_INTEREST_RATIO": {
+      "category": "Options Data",
+      "summary": "Realtime volume-to-open-interest ratio",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=REALTIME_VOLUME_OPEN_INTEREST_RATIO&symbol=NVDA&apikey=demo"
+    },
+    "HISTORICAL_OPTIONS": {
+      "category": "Options Data",
+      "summary": "Full historical option chain for a date (15+ yrs), with greeks & IV",
+      "premium": true,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "date", "required": false, "type": "string", "format": "YYYY-MM-DD", "description": "Any date since 2008-01-01. Defaults to previous trading session."},
+        {"name": "contract", "required": false, "type": "string"},
+        {"name": "expiration", "required": false, "type": "string", "format": "YYYY-MM-DD"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=HISTORICAL_OPTIONS&symbol=IBM&date=2017-11-15&apikey=demo"
+    },
+    "HISTORICAL_PUT_CALL_RATIO": {
+      "category": "Options Data",
+      "summary": "Historical put-call ratio",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "date", "required": false, "type": "string", "format": "YYYY-MM-DD", "description": "Any date since 2008-01-01. Defaults to previous session."}
+      ],
+      "example": "/query?function=HISTORICAL_PUT_CALL_RATIO&symbol=IBM&date=2026-03-12&apikey=demo"
+    },
+    "HISTORICAL_VOLUME_OPEN_INTEREST_RATIO": {
+      "category": "Options Data",
+      "summary": "Historical volume-to-open-interest ratio",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "date", "required": false, "type": "string", "format": "YYYY-MM-DD"}
+      ],
+      "example": "/query?function=HISTORICAL_VOLUME_OPEN_INTEREST_RATIO&symbol=NVDA&date=2026-04-06&apikey=demo"
+    },
+
+    "NEWS_SENTIMENT": {
+      "category": "Alpha Intelligence",
+      "summary": "Market news & sentiment feed",
+      "premium": false,
+      "description": "Live and historical news with sentiment scoring across stocks, crypto, forex, and topics.",
+      "parameters": [
+        {"name": "tickers", "required": false, "type": "string", "description": "Comma list; multiple = AND. Supports CRYPTO:BTC and FOREX:USD prefixes."},
+        {"name": "topics", "required": false, "type": "string", "description": "Comma list; multiple = AND. Values: blockchain, earnings, ipo, mergers_and_acquisitions, financial_markets, economy_fiscal, economy_monetary, economy_macro, energy_transportation, finance, life_sciences, manufacturing, real_estate, retail_wholesale, technology."},
+        {"name": "time_from", "required": false, "type": "string", "format": "YYYYMMDDTHHMM"},
+        {"name": "time_to", "required": false, "type": "string", "format": "YYYYMMDDTHHMM"},
+        {"name": "sort", "required": false, "type": "string", "enum": ["LATEST", "EARLIEST", "RELEVANCE"], "default": "LATEST"},
+        {"name": "limit", "required": false, "type": "integer", "default": 50, "description": "Max 1000."}
+      ],
+      "example": "/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=demo",
+      "responseKeys": ["items", "sentiment_score_definition", "feed"]
+    },
+    "EARNINGS_CALL_TRANSCRIPT": {
+      "category": "Alpha Intelligence",
+      "summary": "Earnings call transcript with turn-by-turn sentiment",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "quarter", "required": true, "type": "string", "format": "YYYYQM", "description": "e.g. 2024Q1. Any quarter since 2010Q1."}
+      ],
+      "example": "/query?function=EARNINGS_CALL_TRANSCRIPT&symbol=IBM&quarter=2024Q1&apikey=demo"
+    },
+    "TOP_GAINERS_LOSERS": {
+      "category": "Alpha Intelligence",
+      "summary": "Top 20 gainers, losers & most-active US tickers",
+      "premium": false,
+      "parameters": [
+        {"name": "entitlement", "required": false, "type": "string", "enum": ["realtime", "delayed"]}
+      ],
+      "example": "/query?function=TOP_GAINERS_LOSERS&apikey=demo",
+      "responseKeys": ["top_gainers", "top_losers", "most_actively_traded"]
+    },
+    "INSIDER_TRANSACTIONS": {
+      "category": "Alpha Intelligence",
+      "summary": "Insider transactions by key stakeholders",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "from", "required": false, "type": "string", "format": "YYYY-MM-DD", "description": "Keep only transactions on/after this date."}
+      ],
+      "example": "/query?function=INSIDER_TRANSACTIONS&symbol=IBM&apikey=demo"
+    },
+    "CONGRESS_TRADES": {
+      "category": "Alpha Intelligence",
+      "summary": "Stock trades disclosed by US congressional representatives",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": false, "type": "string", "description": "Provide at least symbol OR bioguide_id."},
+        {"name": "bioguide_id", "required": false, "type": "string", "description": "Politician id (see POLITICIAN_METADATA), e.g. S000510."},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=CONGRESS_TRADES&symbol=AAPL&apikey=demo"
+    },
+    "POLITICIAN_METADATA": {
+      "category": "Alpha Intelligence",
+      "summary": "Metadata for US congressional representatives (bioguide_id, district, tenure)",
+      "premium": false,
+      "parameters": [],
+      "example": "/query?function=POLITICIAN_METADATA&apikey=demo"
+    },
+    "INSTITUTIONAL_HOLDINGS": {
+      "category": "Alpha Intelligence",
+      "summary": "Institutional ownership and holdings for an equity",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=INSTITUTIONAL_HOLDINGS&symbol=IBM&apikey=demo"
+    },
+    "ANALYTICS_FIXED_WINDOW": {
+      "category": "Alpha Intelligence",
+      "summary": "Advanced analytics over a fixed window (mean, variance, correlation, etc.)",
+      "premium": false,
+      "host": "alphavantageapi.co",
+      "path": "/timeseries/analytics",
+      "note": "Different host/path than the /query base. Free keys: up to 5 symbols; premium: up to 50.",
+      "parameters": [
+        {"name": "SYMBOLS", "required": true, "type": "string", "description": "Comma-separated symbols."},
+        {"name": "RANGE", "required": true, "type": "string", "description": "Date range. Text values full/{N}day/week/month/year (and {N}minute/hour intraday), OR pass RANGE twice for start & end (e.g. RANGE=2023-07-01&RANGE=2023-08-31), OR YYYY-MM / YYYY-MM-DD."},
+        {"name": "OHLC", "required": false, "type": "string", "enum": ["open", "high", "low", "close"], "default": "close"},
+        {"name": "INTERVAL", "required": true, "type": "string", "enum": ["1min", "5min", "15min", "30min", "60min", "DAILY", "WEEKLY", "MONTHLY"]},
+        {"name": "CALCULATIONS", "required": true, "type": "string", "description": "Comma list: MIN, MAX, MEAN, MEDIAN, CUMULATIVE_RETURN, VARIANCE(annualized=True), STDDEV(annualized=True), MAX_DRAWDOWN, HISTOGRAM(bins=N), AUTOCORRELATION(lag=N), COVARIANCE(annualized=True), CORRELATION(method=PEARSON|KENDALL|SPEARMAN)."}
+      ],
+      "example": "https://alphavantageapi.co/timeseries/analytics?SYMBOLS=AAPL,MSFT,IBM&RANGE=2023-07-01&RANGE=2023-08-31&INTERVAL=DAILY&OHLC=close&CALCULATIONS=MEAN,STDDEV,CORRELATION&apikey=demo"
+    },
+    "ANALYTICS_SLIDING_WINDOW": {
+      "category": "Alpha Intelligence",
+      "summary": "Advanced analytics over sliding windows (moving variance, correlation, etc.)",
+      "premium": false,
+      "host": "alphavantageapi.co",
+      "path": "/timeseries/running_analytics",
+      "note": "Free keys: 1 calculation & up to 5 symbols; premium: multiple calculations & up to 50 symbols.",
+      "parameters": [
+        {"name": "SYMBOLS", "required": true, "type": "string"},
+        {"name": "RANGE", "required": true, "type": "string", "description": "Same semantics as ANALYTICS_FIXED_WINDOW."},
+        {"name": "OHLC", "required": false, "type": "string", "enum": ["open", "high", "low", "close"], "default": "close"},
+        {"name": "INTERVAL", "required": true, "type": "string", "enum": ["1min", "5min", "15min", "30min", "60min", "DAILY", "WEEKLY", "MONTHLY"]},
+        {"name": "WINDOW_SIZE", "required": true, "type": "integer", "description": "Moving window size; hard minimum 10."},
+        {"name": "CALCULATIONS", "required": true, "type": "string", "description": "Comma list: MEAN, MEDIAN, CUMULATIVE_RETURN, VARIANCE, STDDEV, COVARIANCE, CORRELATION (annualized/method options as in fixed window)."}
+      ],
+      "example": "https://alphavantageapi.co/timeseries/running_analytics?SYMBOLS=AAPL,IBM&RANGE=2month&INTERVAL=DAILY&OHLC=close&WINDOW_SIZE=20&CALCULATIONS=MEAN,STDDEV(annualized=True)&apikey=demo"
+    },
+
+    "OVERVIEW": {
+      "category": "Fundamental Data",
+      "summary": "Company overview, ratios & key metrics",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=OVERVIEW&symbol=IBM&apikey=demo"
+    },
+    "COMPANY_LOGO": {
+      "category": "Fundamental Data",
+      "summary": "Company logo (PNG + SVG URLs)",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=COMPANY_LOGO&symbol=IBM&apikey=demo"
+    },
+    "ETF_PROFILE": {
+      "category": "Fundamental Data",
+      "summary": "ETF metrics + holdings/constituents with allocations",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string", "description": "ETF ticker, e.g. QQQ."}
+      ],
+      "example": "/query?function=ETF_PROFILE&symbol=QQQ&apikey=demo"
+    },
+    "DIVIDENDS": {
+      "category": "Fundamental Data",
+      "summary": "Historical and declared future dividend distributions",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=DIVIDENDS&symbol=IBM&apikey=demo"
+    },
+    "SPLITS": {
+      "category": "Fundamental Data",
+      "summary": "Historical split events",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=SPLITS&symbol=IBM&apikey=demo"
+    },
+    "INCOME_STATEMENT": {
+      "category": "Fundamental Data",
+      "summary": "Annual & quarterly income statements (GAAP/IFRS normalized)",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=INCOME_STATEMENT&symbol=IBM&apikey=demo",
+      "responseKeys": ["symbol", "annualReports", "quarterlyReports"]
+    },
+    "BALANCE_SHEET": {
+      "category": "Fundamental Data",
+      "summary": "Annual & quarterly balance sheets (GAAP/IFRS normalized)",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=BALANCE_SHEET&symbol=IBM&apikey=demo"
+    },
+    "CASH_FLOW": {
+      "category": "Fundamental Data",
+      "summary": "Annual & quarterly cash flow statements",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=CASH_FLOW&symbol=IBM&apikey=demo"
+    },
+    "SHARES_OUTSTANDING": {
+      "category": "Fundamental Data",
+      "summary": "Quarterly shares outstanding (basic & diluted)",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=SHARES_OUTSTANDING&symbol=MSFT&apikey=demo"
+    },
+    "EARNINGS": {
+      "category": "Fundamental Data",
+      "summary": "Annual & quarterly EPS history with estimates and surprises",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=EARNINGS&symbol=IBM&apikey=demo"
+    },
+    "EARNINGS_ESTIMATES": {
+      "category": "Fundamental Data",
+      "summary": "Annual & quarterly EPS/revenue estimates with analyst counts & revisions",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=EARNINGS_ESTIMATES&symbol=IBM&apikey=demo"
+    },
+    "LISTING_STATUS": {
+      "category": "Fundamental Data",
+      "summary": "Active or delisted US stocks & ETFs (CSV only)",
+      "premium": false,
+      "responseFormat": "csv",
+      "parameters": [
+        {"name": "date", "required": false, "type": "string", "format": "YYYY-MM-DD", "description": "Point-in-time snapshot; any date after 2010-01-01. Defaults to latest trading day."},
+        {"name": "state", "required": false, "type": "string", "enum": ["active", "delisted"], "default": "active"}
+      ],
+      "example": "/query?function=LISTING_STATUS&apikey=demo"
+    },
+    "EARNINGS_CALENDAR": {
+      "category": "Fundamental Data",
+      "summary": "Expected company earnings (CSV only)",
+      "premium": false,
+      "responseFormat": "csv",
+      "parameters": [
+        {"name": "symbol", "required": false, "type": "string", "description": "Unset returns the full scheduled list."},
+        {"name": "horizon", "required": false, "type": "string", "enum": ["3month", "6month", "12month"], "default": "3month"}
+      ],
+      "example": "/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=demo"
+    },
+    "IPO_CALENDAR": {
+      "category": "Fundamental Data",
+      "summary": "IPOs expected in the next 3 months (CSV only)",
+      "premium": false,
+      "responseFormat": "csv",
+      "parameters": [],
+      "example": "/query?function=IPO_CALENDAR&apikey=demo"
+    },
+
+    "CURRENCY_EXCHANGE_RATE": {
+      "category": "Forex (FX)",
+      "summary": "Realtime exchange rate for a currency pair (fiat or crypto)",
+      "premium": false,
+      "description": "Also serves crypto pairs. from/to may each be a physical currency (USD) or cryptocurrency (BTC).",
+      "parameters": [
+        {"name": "from_currency", "required": true, "type": "string", "description": "e.g. USD or BTC."},
+        {"name": "to_currency", "required": true, "type": "string", "description": "e.g. JPY or EUR."}
+      ],
+      "example": "/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey=demo",
+      "responseKeys": ["Realtime Currency Exchange Rate"]
+    },
+    "FX_INTRADAY": {
+      "category": "Forex (FX)",
+      "summary": "Intraday FX time series",
+      "premium": true,
+      "parameters": [
+        {"name": "from_symbol", "required": true, "type": "string", "description": "Three-letter code, e.g. EUR."},
+        {"name": "to_symbol", "required": true, "type": "string", "description": "Three-letter code, e.g. USD."},
+        {"name": "interval", "required": true, "type": "string", "enum": ["1min", "5min", "15min", "30min", "60min"]},
+        {"name": "outputsize", "required": false, "type": "string", "enum": ["compact", "full"], "default": "compact"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=FX_INTRADAY&from_symbol=EUR&to_symbol=USD&interval=5min&apikey=demo"
+    },
+    "FX_DAILY": {
+      "category": "Forex (FX)",
+      "summary": "Daily FX time series",
+      "premium": false,
+      "parameters": [
+        {"name": "from_symbol", "required": true, "type": "string"},
+        {"name": "to_symbol", "required": true, "type": "string"},
+        {"name": "outputsize", "required": false, "type": "string", "enum": ["compact", "full"], "default": "compact"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=FX_DAILY&from_symbol=EUR&to_symbol=USD&apikey=demo"
+    },
+    "FX_WEEKLY": {
+      "category": "Forex (FX)",
+      "summary": "Weekly FX time series",
+      "premium": false,
+      "parameters": [
+        {"name": "from_symbol", "required": true, "type": "string"},
+        {"name": "to_symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=FX_WEEKLY&from_symbol=EUR&to_symbol=USD&apikey=demo"
+    },
+    "FX_MONTHLY": {
+      "category": "Forex (FX)",
+      "summary": "Monthly FX time series",
+      "premium": false,
+      "parameters": [
+        {"name": "from_symbol", "required": true, "type": "string"},
+        {"name": "to_symbol", "required": true, "type": "string"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=FX_MONTHLY&from_symbol=EUR&to_symbol=USD&apikey=demo"
+    },
+
+    "CRYPTO_INTRADAY": {
+      "category": "Digital & Crypto Currencies",
+      "summary": "Intraday crypto time series",
+      "premium": true,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string", "description": "Crypto symbol, e.g. ETH."},
+        {"name": "market", "required": true, "type": "string", "description": "Exchange market, e.g. USD."},
+        {"name": "interval", "required": true, "type": "string", "enum": ["1min", "5min", "15min", "30min", "60min"]},
+        {"name": "outputsize", "required": false, "type": "string", "enum": ["compact", "full"], "default": "compact"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=CRYPTO_INTRADAY&symbol=ETH&market=USD&interval=5min&apikey=demo"
+    },
+    "DIGITAL_CURRENCY_DAILY": {
+      "category": "Digital & Crypto Currencies",
+      "summary": "Daily crypto history (quoted in market currency & USD)",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string", "description": "e.g. BTC."},
+        {"name": "market", "required": true, "type": "string", "description": "e.g. EUR."}
+      ],
+      "example": "/query?function=DIGITAL_CURRENCY_DAILY&symbol=BTC&market=EUR&apikey=demo"
+    },
+    "DIGITAL_CURRENCY_WEEKLY": {
+      "category": "Digital & Crypto Currencies",
+      "summary": "Weekly crypto history",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "market", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=DIGITAL_CURRENCY_WEEKLY&symbol=BTC&market=EUR&apikey=demo"
+    },
+    "DIGITAL_CURRENCY_MONTHLY": {
+      "category": "Digital & Crypto Currencies",
+      "summary": "Monthly crypto history",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string"},
+        {"name": "market", "required": true, "type": "string"}
+      ],
+      "example": "/query?function=DIGITAL_CURRENCY_MONTHLY&symbol=BTC&market=EUR&apikey=demo"
+    },
+
+    "GOLD_SILVER_SPOT": {
+      "category": "Commodities",
+      "summary": "Live gold & silver spot prices",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string", "enum": ["GOLD", "XAU", "SILVER", "XAG"]}
+      ],
+      "example": "/query?function=GOLD_SILVER_SPOT&symbol=SILVER&apikey=demo"
+    },
+    "GOLD_SILVER_HISTORY": {
+      "category": "Commodities",
+      "summary": "Historical gold & silver prices",
+      "premium": false,
+      "parameters": [
+        {"name": "symbol", "required": true, "type": "string", "enum": ["GOLD", "XAU", "SILVER", "XAG"]},
+        {"name": "interval", "required": true, "type": "string", "enum": ["daily", "weekly", "monthly"]}
+      ],
+      "example": "/query?function=GOLD_SILVER_HISTORY&symbol=SILVER&interval=daily&apikey=demo"
+    },
+    "WTI": {
+      "category": "Commodities",
+      "summary": "Crude oil prices - WTI (source: EIA via FRED)",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["daily", "weekly", "monthly"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=WTI&interval=monthly&apikey=demo"
+    },
+    "BRENT": {
+      "category": "Commodities",
+      "summary": "Crude oil prices - Brent (source: EIA via FRED)",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["daily", "weekly", "monthly"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=BRENT&interval=monthly&apikey=demo"
+    },
+    "NATURAL_GAS": {
+      "category": "Commodities",
+      "summary": "Henry Hub natural gas spot prices",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["daily", "weekly", "monthly"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=NATURAL_GAS&interval=monthly&apikey=demo"
+    },
+    "COPPER": {
+      "category": "Commodities",
+      "summary": "Global price of copper",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "quarterly", "annual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=COPPER&interval=monthly&apikey=demo"
+    },
+    "ALUMINUM": {
+      "category": "Commodities",
+      "summary": "Global price of aluminum",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "quarterly", "annual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=ALUMINUM&interval=monthly&apikey=demo"
+    },
+    "WHEAT": {
+      "category": "Commodities",
+      "summary": "Global price of wheat",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "quarterly", "annual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=WHEAT&interval=monthly&apikey=demo"
+    },
+    "CORN": {
+      "category": "Commodities",
+      "summary": "Global price of corn",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "quarterly", "annual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=CORN&interval=monthly&apikey=demo"
+    },
+    "COTTON": {
+      "category": "Commodities",
+      "summary": "Global price of cotton",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "quarterly", "annual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=COTTON&interval=monthly&apikey=demo"
+    },
+    "SUGAR": {
+      "category": "Commodities",
+      "summary": "Global price of sugar",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "quarterly", "annual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=SUGAR&interval=monthly&apikey=demo"
+    },
+    "COFFEE": {
+      "category": "Commodities",
+      "summary": "Global price of coffee",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "quarterly", "annual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=COFFEE&interval=monthly&apikey=demo"
+    },
+    "ALL_COMMODITIES": {
+      "category": "Commodities",
+      "summary": "Global price index of all commodities",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "quarterly", "annual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=ALL_COMMODITIES&interval=monthly&apikey=demo"
+    },
+
+    "REAL_GDP": {
+      "category": "Economic Indicators",
+      "summary": "US Real GDP (annual/quarterly)",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["quarterly", "annual"], "default": "annual"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=REAL_GDP&interval=annual&apikey=demo"
+    },
+    "REAL_GDP_PER_CAPITA": {
+      "category": "Economic Indicators",
+      "summary": "US Real GDP per capita (quarterly)",
+      "premium": false,
+      "parameters": [
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=REAL_GDP_PER_CAPITA&apikey=demo"
+    },
+    "TREASURY_YIELD": {
+      "category": "Economic Indicators",
+      "summary": "US Treasury yield by maturity",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["daily", "weekly", "monthly"], "default": "monthly"},
+        {"name": "maturity", "required": false, "type": "string", "enum": ["3month", "2year", "5year", "7year", "10year", "30year"], "default": "10year"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=TREASURY_YIELD&interval=monthly&maturity=10year&apikey=demo"
+    },
+    "FEDERAL_FUNDS_RATE": {
+      "category": "Economic Indicators",
+      "summary": "US federal funds (interest) rate",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["daily", "weekly", "monthly"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=FEDERAL_FUNDS_RATE&interval=monthly&apikey=demo"
+    },
+    "CPI": {
+      "category": "Economic Indicators",
+      "summary": "US Consumer Price Index",
+      "premium": false,
+      "parameters": [
+        {"name": "interval", "required": false, "type": "string", "enum": ["monthly", "semiannual"], "default": "monthly"},
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=CPI&interval=monthly&apikey=demo"
+    },
+    "INFLATION": {
+      "category": "Economic Indicators",
+      "summary": "US annual inflation rate (consumer prices)",
+      "premium": false,
+      "parameters": [
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=INFLATION&apikey=demo"
+    },
+    "RETAIL_SALES": {
+      "category": "Economic Indicators",
+      "summary": "US Advance Retail Sales (monthly)",
+      "premium": false,
+      "parameters": [
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=RETAIL_SALES&apikey=demo"
+    },
+    "DURABLES": {
+      "category": "Economic Indicators",
+      "summary": "US Durable Goods new orders (monthly)",
+      "premium": false,
+      "parameters": [
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=DURABLES&apikey=demo"
+    },
+    "UNEMPLOYMENT": {
+      "category": "Economic Indicators",
+      "summary": "US unemployment rate (monthly)",
+      "premium": false,
+      "parameters": [
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=UNEMPLOYMENT&apikey=demo"
+    },
+    "NONFARM_PAYROLL": {
+      "category": "Economic Indicators",
+      "summary": "US Total Nonfarm Payroll (monthly)",
+      "premium": false,
+      "parameters": [
+        {"name": "datatype", "required": false, "type": "string", "enum": ["json", "csv"], "default": "json"}
+      ],
+      "example": "/query?function=NONFARM_PAYROLL&apikey=demo"
+    },
+
+    "SMA": {"category": "Technical Indicators", "summary": "Simple Moving Average", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=SMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "EMA": {"category": "Technical Indicators", "summary": "Exponential Moving Average", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=EMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "WMA": {"category": "Technical Indicators", "summary": "Weighted Moving Average", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=WMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "DEMA": {"category": "Technical Indicators", "summary": "Double Exponential Moving Average", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=DEMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "TEMA": {"category": "Technical Indicators", "summary": "Triple Exponential Moving Average", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=TEMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "TRIMA": {"category": "Technical Indicators", "summary": "Triangular Moving Average", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=TRIMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "KAMA": {"category": "Technical Indicators", "summary": "Kaufman Adaptive Moving Average", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=KAMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "MAMA": {
+      "category": "Technical Indicators", "summary": "MESA Adaptive Moving Average", "premium": false,
+      "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastlimit", "required": false, "type": "number", "default": 0.01},
+        {"name": "slowlimit", "required": false, "type": "number", "default": 0.01}
+      ],
+      "example": "/query?function=MAMA&symbol=IBM&interval=daily&series_type=close&fastlimit=0.02&apikey=demo"
+    },
+    "VWAP": {"category": "Technical Indicators", "summary": "Volume Weighted Average Price (intraday only)", "premium": true, "parameterGroups": ["core", "month", "datatype", "entitlement"], "intervalEnum": ["1min", "5min", "15min", "30min", "60min"], "example": "/query?function=VWAP&symbol=IBM&interval=15min&apikey=demo"},
+    "T3": {"category": "Technical Indicators", "summary": "Tilson T3 Moving Average", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=T3&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "MACD": {
+      "category": "Technical Indicators", "summary": "Moving Average Convergence/Divergence", "premium": true,
+      "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastperiod", "required": false, "type": "integer", "default": 12},
+        {"name": "slowperiod", "required": false, "type": "integer", "default": 26},
+        {"name": "signalperiod", "required": false, "type": "integer", "default": 9}
+      ],
+      "example": "/query?function=MACD&symbol=IBM&interval=daily&series_type=open&apikey=demo"
+    },
+    "MACDEXT": {
+      "category": "Technical Indicators", "summary": "MACD with controllable MA types", "premium": false,
+      "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastperiod", "required": false, "type": "integer", "default": 12},
+        {"name": "slowperiod", "required": false, "type": "integer", "default": 26},
+        {"name": "signalperiod", "required": false, "type": "integer", "default": 9},
+        {"name": "fastmatype", "required": false, "type": "integer", "default": 0, "description": "0-8 MA type mapping."},
+        {"name": "slowmatype", "required": false, "type": "integer", "default": 0},
+        {"name": "signalmatype", "required": false, "type": "integer", "default": 0}
+      ],
+      "example": "/query?function=MACDEXT&symbol=IBM&interval=daily&series_type=open&apikey=demo"
+    },
+    "STOCH": {
+      "category": "Technical Indicators", "summary": "Stochastic Oscillator", "premium": false,
+      "parameterGroups": ["core", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastkperiod", "required": false, "type": "integer", "default": 5},
+        {"name": "slowkperiod", "required": false, "type": "integer", "default": 3},
+        {"name": "slowdperiod", "required": false, "type": "integer", "default": 3},
+        {"name": "slowkmatype", "required": false, "type": "integer", "default": 0},
+        {"name": "slowdmatype", "required": false, "type": "integer", "default": 0}
+      ],
+      "example": "/query?function=STOCH&symbol=IBM&interval=daily&apikey=demo"
+    },
+    "STOCHF": {
+      "category": "Technical Indicators", "summary": "Stochastic Fast", "premium": false,
+      "parameterGroups": ["core", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastkperiod", "required": false, "type": "integer", "default": 5},
+        {"name": "fastdperiod", "required": false, "type": "integer", "default": 3},
+        {"name": "fastdmatype", "required": false, "type": "integer", "default": 0}
+      ],
+      "example": "/query?function=STOCHF&symbol=IBM&interval=daily&apikey=demo"
+    },
+    "RSI": {"category": "Technical Indicators", "summary": "Relative Strength Index", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=RSI&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo"},
+    "STOCHRSI": {
+      "category": "Technical Indicators", "summary": "Stochastic RSI", "premium": false,
+      "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastkperiod", "required": false, "type": "integer", "default": 5},
+        {"name": "fastdperiod", "required": false, "type": "integer", "default": 3},
+        {"name": "fastdmatype", "required": false, "type": "integer", "default": 0}
+      ],
+      "example": "/query?function=STOCHRSI&symbol=IBM&interval=daily&time_period=10&series_type=close&fastkperiod=6&fastdmatype=1&apikey=demo"
+    },
+    "WILLR": {"category": "Technical Indicators", "summary": "Williams %R", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=WILLR&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "ADX": {"category": "Technical Indicators", "summary": "Average Directional Movement Index", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=ADX&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "ADXR": {"category": "Technical Indicators", "summary": "ADX Rating", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=ADXR&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "APO": {
+      "category": "Technical Indicators", "summary": "Absolute Price Oscillator", "premium": false,
+      "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastperiod", "required": false, "type": "integer", "default": 12},
+        {"name": "slowperiod", "required": false, "type": "integer", "default": 26},
+        {"name": "matype", "required": false, "type": "integer", "default": 0}
+      ],
+      "example": "/query?function=APO&symbol=IBM&interval=daily&series_type=close&fastperiod=10&matype=1&apikey=demo"
+    },
+    "PPO": {
+      "category": "Technical Indicators", "summary": "Percentage Price Oscillator", "premium": false,
+      "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastperiod", "required": false, "type": "integer", "default": 12},
+        {"name": "slowperiod", "required": false, "type": "integer", "default": 26},
+        {"name": "matype", "required": false, "type": "integer", "default": 0}
+      ],
+      "example": "/query?function=PPO&symbol=IBM&interval=daily&series_type=close&fastperiod=10&matype=1&apikey=demo"
+    },
+    "MOM": {"category": "Technical Indicators", "summary": "Momentum", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=MOM&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo"},
+    "BOP": {"category": "Technical Indicators", "summary": "Balance Of Power", "premium": false, "parameterGroups": ["core", "month", "datatype", "entitlement"], "example": "/query?function=BOP&symbol=IBM&interval=daily&apikey=demo"},
+    "CCI": {"category": "Technical Indicators", "summary": "Commodity Channel Index", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=CCI&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "CMO": {"category": "Technical Indicators", "summary": "Chande Momentum Oscillator", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=CMO&symbol=IBM&interval=weekly&time_period=10&series_type=close&apikey=demo"},
+    "ROC": {"category": "Technical Indicators", "summary": "Rate Of Change", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=ROC&symbol=IBM&interval=weekly&time_period=10&series_type=close&apikey=demo"},
+    "ROCR": {"category": "Technical Indicators", "summary": "Rate Of Change Ratio", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=ROCR&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo"},
+    "AROON": {"category": "Technical Indicators", "summary": "Aroon", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=AROON&symbol=IBM&interval=daily&time_period=14&apikey=demo"},
+    "AROONOSC": {"category": "Technical Indicators", "summary": "Aroon Oscillator", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=AROONOSC&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "MFI": {"category": "Technical Indicators", "summary": "Money Flow Index", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=MFI&symbol=IBM&interval=weekly&time_period=10&apikey=demo"},
+    "TRIX": {"category": "Technical Indicators", "summary": "1-day ROC of triple-smooth EMA", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=TRIX&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo"},
+    "ULTOSC": {
+      "category": "Technical Indicators", "summary": "Ultimate Oscillator", "premium": false,
+      "parameterGroups": ["core", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "timeperiod1", "required": false, "type": "integer", "default": 7},
+        {"name": "timeperiod2", "required": false, "type": "integer", "default": 14},
+        {"name": "timeperiod3", "required": false, "type": "integer", "default": 28}
+      ],
+      "example": "/query?function=ULTOSC&symbol=IBM&interval=daily&timeperiod1=8&apikey=demo"
+    },
+    "DX": {"category": "Technical Indicators", "summary": "Directional Movement Index", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=DX&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "MINUS_DI": {"category": "Technical Indicators", "summary": "Minus Directional Indicator", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=MINUS_DI&symbol=IBM&interval=weekly&time_period=10&apikey=demo"},
+    "PLUS_DI": {"category": "Technical Indicators", "summary": "Plus Directional Indicator", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=PLUS_DI&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "MINUS_DM": {"category": "Technical Indicators", "summary": "Minus Directional Movement", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=MINUS_DM&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "PLUS_DM": {"category": "Technical Indicators", "summary": "Plus Directional Movement", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=PLUS_DM&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "BBANDS": {
+      "category": "Technical Indicators", "summary": "Bollinger Bands", "premium": false,
+      "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "nbdevup", "required": false, "type": "integer", "default": 2},
+        {"name": "nbdevdn", "required": false, "type": "integer", "default": 2},
+        {"name": "matype", "required": false, "type": "integer", "default": 0}
+      ],
+      "example": "/query?function=BBANDS&symbol=IBM&interval=weekly&time_period=5&series_type=close&nbdevup=3&nbdevdn=3&apikey=demo"
+    },
+    "MIDPOINT": {"category": "Technical Indicators", "summary": "MidPoint = (highest + lowest)/2", "premium": false, "parameterGroups": ["core", "time_period", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=MIDPOINT&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo"},
+    "MIDPRICE": {"category": "Technical Indicators", "summary": "MidPrice = (highest high + lowest low)/2", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=MIDPRICE&symbol=IBM&interval=daily&time_period=10&apikey=demo"},
+    "SAR": {
+      "category": "Technical Indicators", "summary": "Parabolic SAR", "premium": false,
+      "parameterGroups": ["core", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "acceleration", "required": false, "type": "number", "default": 0.01},
+        {"name": "maximum", "required": false, "type": "number", "default": 0.20}
+      ],
+      "example": "/query?function=SAR&symbol=IBM&interval=weekly&acceleration=0.05&maximum=0.25&apikey=demo"
+    },
+    "TRANGE": {"category": "Technical Indicators", "summary": "True Range", "premium": false, "parameterGroups": ["core", "month", "datatype", "entitlement"], "example": "/query?function=TRANGE&symbol=IBM&interval=daily&apikey=demo"},
+    "ATR": {"category": "Technical Indicators", "summary": "Average True Range", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=ATR&symbol=IBM&interval=daily&time_period=14&apikey=demo"},
+    "NATR": {"category": "Technical Indicators", "summary": "Normalized Average True Range", "premium": false, "parameterGroups": ["core", "time_period", "month", "datatype", "entitlement"], "example": "/query?function=NATR&symbol=IBM&interval=weekly&time_period=14&apikey=demo"},
+    "AD": {"category": "Technical Indicators", "summary": "Chaikin A/D Line", "premium": false, "parameterGroups": ["core", "month", "datatype", "entitlement"], "example": "/query?function=AD&symbol=IBM&interval=daily&apikey=demo"},
+    "ADOSC": {
+      "category": "Technical Indicators", "summary": "Chaikin A/D Oscillator", "premium": false,
+      "parameterGroups": ["core", "month", "datatype", "entitlement"],
+      "parameters": [
+        {"name": "fastperiod", "required": false, "type": "integer", "default": 3},
+        {"name": "slowperiod", "required": false, "type": "integer", "default": 10}
+      ],
+      "example": "/query?function=ADOSC&symbol=IBM&interval=daily&fastperiod=5&apikey=demo"
+    },
+    "OBV": {"category": "Technical Indicators", "summary": "On Balance Volume", "premium": false, "parameterGroups": ["core", "month", "datatype", "entitlement"], "example": "/query?function=OBV&symbol=IBM&interval=weekly&apikey=demo"},
+    "HT_TRENDLINE": {"category": "Technical Indicators", "summary": "Hilbert Transform - Instantaneous Trendline", "premium": false, "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=HT_TRENDLINE&symbol=IBM&interval=daily&series_type=close&apikey=demo"},
+    "HT_SINE": {"category": "Technical Indicators", "summary": "Hilbert Transform - Sine Wave", "premium": false, "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=HT_SINE&symbol=IBM&interval=daily&series_type=close&apikey=demo"},
+    "HT_TRENDMODE": {"category": "Technical Indicators", "summary": "Hilbert Transform - Trend vs Cycle Mode", "premium": false, "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=HT_TRENDMODE&symbol=IBM&interval=weekly&series_type=close&apikey=demo"},
+    "HT_DCPERIOD": {"category": "Technical Indicators", "summary": "Hilbert Transform - Dominant Cycle Period", "premium": false, "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=HT_DCPERIOD&symbol=IBM&interval=daily&series_type=close&apikey=demo"},
+    "HT_DCPHASE": {"category": "Technical Indicators", "summary": "Hilbert Transform - Dominant Cycle Phase", "premium": false, "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=HT_DCPHASE&symbol=IBM&interval=daily&series_type=close&apikey=demo"},
+    "HT_PHASOR": {"category": "Technical Indicators", "summary": "Hilbert Transform - Phasor Components", "premium": false, "parameterGroups": ["core", "series_type", "month", "datatype", "entitlement"], "example": "/query?function=HT_PHASOR&symbol=IBM&interval=weekly&series_type=close&apikey=demo"}
+  }
+}

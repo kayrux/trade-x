@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { createChart, CandlestickSeries, CrosshairMode } from "lightweight-charts";
+import { createChart, CandlestickSeries, AreaSeries, CrosshairMode } from "lightweight-charts";
 import { useTheme } from "../../../context/ThemeContext";
 import "./CandleChart.css";
 
@@ -28,13 +28,14 @@ function toChartTime(ts, resolution) {
   return ts.split("T")[0];
 }
 
-function CandleChart({ candles, resolution, loading, error }) {
+function CandleChart({ candles, resolution, loading, error, chartType = "candles" }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
   const { theme } = useTheme();
 
-  // Create chart once on mount, destroy on unmount
+  // Create chart when mounted or when the series type changes (e.g. switching
+  // between an OHLC equity and a single-value commodity), destroy on unmount.
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -43,14 +44,24 @@ function CandleChart({ candles, resolution, loading, error }) {
       ...(theme === "dark" ? DARK_THEME : LIGHT_THEME),
     });
 
-    const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#22c55e",
-      downColor: "#ef4444",
-      borderUpColor: "#22c55e",
-      borderDownColor: "#ef4444",
-      wickUpColor: "#22c55e",
-      wickDownColor: "#ef4444",
-    });
+    // Commodities (Alpha Vantage) carry one price per day, so open=high=low=close
+    // and a candlestick renders as unreadable dashes — draw them as an area line.
+    const series =
+      chartType === "line"
+        ? chart.addSeries(AreaSeries, {
+            lineColor: "#3b82f6",
+            topColor: "rgba(59, 130, 246, 0.28)",
+            bottomColor: "rgba(59, 130, 246, 0.02)",
+            lineWidth: 2,
+          })
+        : chart.addSeries(CandlestickSeries, {
+            upColor: "#22c55e",
+            downColor: "#ef4444",
+            borderUpColor: "#22c55e",
+            borderDownColor: "#ef4444",
+            wickUpColor: "#22c55e",
+            wickDownColor: "#ef4444",
+          });
 
     chartRef.current = chart;
     seriesRef.current = series;
@@ -60,7 +71,7 @@ function CandleChart({ candles, resolution, loading, error }) {
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chartType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply theme changes
   useEffect(() => {
@@ -76,17 +87,23 @@ function CandleChart({ candles, resolution, loading, error }) {
       return;
     }
 
-    const data = candles.map((c) => ({
-      time: toChartTime(c.ts, resolution),
-      open: parseFloat(c.open),
-      high: parseFloat(c.high),
-      low: parseFloat(c.low),
-      close: parseFloat(c.close),
-    }));
+    const data =
+      chartType === "line"
+        ? candles.map((c) => ({
+            time: toChartTime(c.ts, resolution),
+            value: parseFloat(c.close),
+          }))
+        : candles.map((c) => ({
+            time: toChartTime(c.ts, resolution),
+            open: parseFloat(c.open),
+            high: parseFloat(c.high),
+            low: parseFloat(c.low),
+            close: parseFloat(c.close),
+          }));
 
     seriesRef.current.setData(data);
     chartRef.current.timeScale().fitContent();
-  }, [candles, resolution]);
+  }, [candles, resolution, chartType]);
 
   return (
     <div className="candle-chart">

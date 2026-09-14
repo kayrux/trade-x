@@ -50,7 +50,11 @@ router.get("/:symbol", async (req, res) => {
 
     // 2. Ensure daily coverage is current (gap-fill if needed).
     //    Weekly/monthly are derived from daily rows so this covers all resolutions.
-    await ensureCoverage(symbolId, symbol);
+    //    Commodities (AV:*) are populated by the Alpha Vantage sync job, not the
+    //    yfinance service, so skip the yfinance gap-fill for them.
+    if (!symbol.startsWith("AV:")) {
+      await ensureCoverage(symbolId, symbol);
+    }
 
     // 3. Build date window from range or explicit from/to
     let from = req.query.from || null;

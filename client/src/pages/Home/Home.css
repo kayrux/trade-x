@@ -32,6 +32,26 @@
   color: var(--color-text-muted);
 }
 
+.home__snapshot-group + .home__snapshot-group {
+  margin-top: 20px;
+}
+
+.home__subsection-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.home__subsection-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  opacity: 0.85;
+}
+
 .home__snapshot-row {
   display: flex;
   gap: 10px;

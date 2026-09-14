@@ -7,12 +7,20 @@ const router = express.Router();
 const QUOTE_STALE_MS = 30 * 1000; // 30 seconds
 const PROFILE_STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// Market-snapshot tiles.  `source` picks the data path:
+//   finnhub — live /quote (equities/ETFs + BINANCE: crypto)
+//   db      — latest daily rows from symbol_candles (Alpha Vantage commodities)
+// `chartable` drives whether the tile links to the Dashboard chart.
 const MARKET_INDICES = [
-  { symbol: "SPY",             displayName: "S&P 500"   },
-  { symbol: "QQQ",             displayName: "NASDAQ"    },
-  { symbol: "DIA",             displayName: "DOW"       },
-  { symbol: "BINANCE:BTCUSDT", displayName: "Bitcoin"  },
-  { symbol: "BINANCE:ETHUSDT", displayName: "Ethereum" },
+  { symbol: "SPY",             displayName: "S&P 500",     source: "finnhub", chartable: true  },
+  { symbol: "QQQ",             displayName: "NASDAQ",      source: "finnhub", chartable: true  },
+  { symbol: "DIA",             displayName: "DOW",         source: "finnhub", chartable: true  },
+  { symbol: "BINANCE:BTCUSDT", displayName: "Bitcoin",     source: "finnhub", chartable: false },
+  { symbol: "BINANCE:ETHUSDT", displayName: "Ethereum",    source: "finnhub", chartable: false },
+  { symbol: "AV:WTI",          displayName: "WTI Crude",   source: "db", chartable: true, ticker: "WTI"    },
+  { symbol: "AV:BRENT",        displayName: "Brent Crude", source: "db", chartable: true, ticker: "Brent"  },
+  { symbol: "AV:GOLD",         displayName: "Gold",        source: "db", chartable: true, ticker: "Gold"   },
+  { symbol: "AV:SILVER",       displayName: "Silver",      source: "db", chartable: true, ticker: "Silver" },
 ];
 
 let _indicesCache = null;
@@ -78,8 +86,12 @@ router.get("/market-indices", async (req, res) => {
 
   const nz = (val) => (val != null && parseFloat(val) !== 0 ? parseFloat(val) : null);
 
-  const results = await Promise.allSettled(
-    MARKET_INDICES.map(({ symbol, displayName }) =>
+  const finnhubEntries = MARKET_INDICES.filter((e) => e.source === "finnhub");
+  const dbEntries = MARKET_INDICES.filter((e) => e.source === "db");
+
+  // Finnhub-sourced tiles (equities/ETFs + crypto): live /quote.
+  const finnhubResults = await Promise.allSettled(
+    finnhubEntries.map(({ symbol, displayName, ticker, chartable }) =>
       axios
         .get("https://finnhub.io/api/v1/quote", {
           params: { symbol, token: process.env.FINNHUB_API_KEY },
@@ -93,28 +105,94 @@ router.get("/market-indices", async (req, res) => {
           return {
             symbol,
             displayName,
+            ticker: ticker ?? null,
             price,
             prevClose,
             change,
             changePct,
             price_source: livePrice != null ? "live" : prevClose != null ? "prev_close" : null,
+            chartable: !!chartable,
             synced_at: new Date().toISOString(),
           };
         })
         .catch(() => ({
           symbol,
           displayName,
+          ticker: ticker ?? null,
           price: null,
           prevClose: null,
           change: null,
           changePct: null,
           price_source: null,
+          chartable: !!chartable,
           synced_at: null,
         })),
     ),
   );
+  const finnhubData = finnhubResults.map((r) => (r.status === "fulfilled" ? r.value : r.reason));
 
-  const data = results.map((r) => (r.status === "fulfilled" ? r.value : r.reason));
+  // DB-sourced tiles (Alpha Vantage commodities): latest two daily closes.
+  let dbData = [];
+  if (dbEntries.length) {
+    const blank = ({ symbol, displayName, ticker, chartable }) => ({
+      symbol,
+      displayName,
+      ticker: ticker ?? null,
+      price: null,
+      prevClose: null,
+      change: null,
+      changePct: null,
+      price_source: null,
+      chartable: !!chartable,
+      synced_at: null,
+    });
+    try {
+      const ids = dbEntries.map((e) => e.symbol);
+      const { rows } = await pool.query(
+        `WITH ranked AS (
+           SELECT symbol_id, ts, close,
+                  ROW_NUMBER() OVER (PARTITION BY symbol_id ORDER BY ts DESC) AS rn
+           FROM symbol_candles
+           WHERE symbol_id = ANY($1) AND resolution = 'daily'
+         )
+         SELECT symbol_id, ts, close FROM ranked WHERE rn <= 2 ORDER BY symbol_id, ts DESC`,
+        [ids],
+      );
+      const bySym = new Map();
+      for (const r of rows) {
+        if (!bySym.has(r.symbol_id)) bySym.set(r.symbol_id, []);
+        bySym.get(r.symbol_id).push(r);
+      }
+      dbData = dbEntries.map((entry) => {
+        const recs = bySym.get(entry.symbol) || [];
+        const price = recs[0] ? parseFloat(recs[0].close) : null;
+        const prevClose = recs[1] ? parseFloat(recs[1].close) : null;
+        const change = price != null && prevClose != null ? price - prevClose : null;
+        const changePct = change != null && prevClose ? (change / prevClose) * 100 : null;
+        if (price == null) return blank(entry);
+        return {
+          symbol: entry.symbol,
+          displayName: entry.displayName,
+          ticker: entry.ticker ?? null,
+          price,
+          prevClose,
+          change,
+          changePct,
+          price_source: "commodity",
+          chartable: !!entry.chartable,
+          synced_at: new Date(recs[0].ts).toISOString(),
+        };
+      });
+    } catch (err) {
+      console.error("market-indices commodities query failed:", err.message);
+      dbData = dbEntries.map(blank);
+    }
+  }
+
+  // Merge back into the declared MARKET_INDICES order.
+  const bySymbol = new Map([...finnhubData, ...dbData].map((d) => [d.symbol, d]));
+  const data = MARKET_INDICES.map((e) => bySymbol.get(e.symbol));
+
   _indicesCache = data;
   _cacheTime = now;
   res.json(data);
@@ -158,9 +236,16 @@ router.get("/:symbol", async (req, res) => {
       return res.status(404).json({ error: "Symbol not found" });
 
     const row = rows[0];
+
+    // Commodities (Alpha Vantage) have no Finnhub quote/profile — serve them
+    // straight from the latest stored daily candle and skip the live refresh.
+    const isCommodity =
+      row.exchange === "COMMODITY" || String(row.id).startsWith("AV:");
+
     const isStale =
-      !row.synced_at ||
-      Date.now() - new Date(row.synced_at).getTime() > QUOTE_STALE_MS;
+      !isCommodity &&
+      (!row.synced_at ||
+        Date.now() - new Date(row.synced_at).getTime() > QUOTE_STALE_MS);
 
     if (isStale) {
       try {
@@ -178,8 +263,9 @@ router.get("/:symbol", async (req, res) => {
     }
 
     const profileStale =
-      !row.profile_synced_at ||
-      Date.now() - new Date(row.profile_synced_at).getTime() > PROFILE_STALE_MS;
+      !isCommodity &&
+      (!row.profile_synced_at ||
+        Date.now() - new Date(row.profile_synced_at).getTime() > PROFILE_STALE_MS);
 
     if (profileStale) {
       try {

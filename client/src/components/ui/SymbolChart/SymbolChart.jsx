@@ -21,6 +21,10 @@ function SymbolChart({ symbol, quote }) {
   const [range, setRange] = useState('1Y');
   const { candles, loading, error } = useCandles(symbol, resolution.toLowerCase(), range.toLowerCase());
 
+  // Commodities (Alpha Vantage, namespaced "AV:") are single-value daily series —
+  // render them as an area line instead of candlesticks.
+  const chartType = symbol?.startsWith('AV:') ? 'line' : 'candles';
+
   const handleRangeChange = (newRange) => {
     setRange(newRange);
     setResolution('Daily');
@@ -78,6 +82,7 @@ function SymbolChart({ symbol, quote }) {
         resolution={resolution}
         loading={loading}
         error={error}
+        chartType={chartType}
       />
       <div className="symbol-chart__footer">
         <ResolutionSwitcher

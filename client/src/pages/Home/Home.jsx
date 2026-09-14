@@ -4,8 +4,6 @@ import { useMarketSnapshot } from '../../hooks/useMarketSnapshot';
 import { useMarketNews } from '../../hooks/useMarketNews';
 import './Home.css';
 
-const STOCK_SYMBOLS = new Set(['SPY', 'QQQ', 'DIA']);
-
 function formatPrice(val) {
   if (val == null) return '—';
   return `$${parseFloat(val).toFixed(2)}`;
@@ -21,7 +19,9 @@ function formatSynced(synced_at) {
   if (!synced_at) return null;
   const mins = Math.max(1, Math.floor((Date.now() - new Date(synced_at).getTime()) / 60000));
   if (mins < 60) return `${mins}m ago`;
-  return `${Math.floor(mins / 60)}h ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 function formatNewsDate(datetime) {
@@ -47,7 +47,7 @@ function TickerCard({ quote, onClick }) {
     >
       <span className="ticker-card__symbol">{quote.displayName}</span>
       <div className="ticker-card__name-row">
-        <span className="ticker-card__name">{quote.symbol}</span>
+        <span className="ticker-card__name">{quote.ticker ?? quote.symbol}</span>
         {quote.price_source === 'prev_close' && (
           <span className="ticker-card__badge">prev. close</span>
         )}
@@ -105,13 +105,30 @@ function NewsCardSkeleton() {
   );
 }
 
+function SnapshotGroup({ label, freshness, children }) {
+  return (
+    <div className="home__snapshot-group">
+      <div className="home__subsection-header">
+        <span className="home__subsection-label">{label}</span>
+        {freshness && <span className="home__freshness">Updated {freshness}</span>}
+      </div>
+      <div className="home__snapshot-row">{children}</div>
+    </div>
+  );
+}
+
 function Home() {
   const navigate = useNavigate();
   const { quotes, loading: quotesLoading } = useMarketSnapshot();
   const { news, loading: newsLoading } = useMarketNews();
 
-  const freshAt = quotes.find((q) => q.synced_at)?.synced_at;
-  const freshnessLabel = formatSynced(freshAt);
+  const isCommodity = (q) => q.symbol.startsWith('AV:');
+  const markets = quotes.filter((q) => !isCommodity(q));
+  const commodities = quotes.filter(isCommodity);
+  const marketFresh = formatSynced(markets.find((q) => q.synced_at)?.synced_at);
+  const commodityFresh = formatSynced(commodities.find((q) => q.synced_at)?.synced_at);
+  const cardClick = (q) =>
+    q.chartable ? () => navigate(`/dashboard?symbol=${encodeURIComponent(q.symbol)}`) : undefined;
 
   return (
     <PageLayout>
@@ -119,21 +136,32 @@ function Home() {
         <section className="home__snapshot">
           <div className="home__snapshot-header">
             <span className="home__section-label">Market Snapshot</span>
-            {freshnessLabel && (
-              <span className="home__freshness">Updated {freshnessLabel}</span>
-            )}
           </div>
-          <div className="home__snapshot-row">
-            {quotesLoading
-              ? Array.from({ length: 5 }, (_, i) => <TickerCardSkeleton key={i} />)
-              : quotes.map((q) => (
-                  <TickerCard
-                    key={q.symbol}
-                    quote={q}
-                    onClick={STOCK_SYMBOLS.has(q.symbol) ? () => navigate(`/dashboard?symbol=${q.symbol}`) : undefined}
-                  />
+          {quotesLoading ? (
+            <>
+              <SnapshotGroup label="Indices & Crypto">
+                {Array.from({ length: 5 }, (_, i) => <TickerCardSkeleton key={i} />)}
+              </SnapshotGroup>
+              <SnapshotGroup label="Commodities">
+                {Array.from({ length: 4 }, (_, i) => <TickerCardSkeleton key={i} />)}
+              </SnapshotGroup>
+            </>
+          ) : (
+            <>
+              <SnapshotGroup label="Indices & Crypto" freshness={marketFresh}>
+                {markets.map((q) => (
+                  <TickerCard key={q.symbol} quote={q} onClick={cardClick(q)} />
                 ))}
-          </div>
+              </SnapshotGroup>
+              {commodities.length > 0 && (
+                <SnapshotGroup label="Commodities" freshness={commodityFresh}>
+                  {commodities.map((q) => (
+                    <TickerCard key={q.symbol} quote={q} onClick={cardClick(q)} />
+                  ))}
+                </SnapshotGroup>
+              )}
+            </>
+          )}
         </section>
 
         <section className="home__news">
