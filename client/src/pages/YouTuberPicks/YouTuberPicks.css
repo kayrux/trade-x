@@ -321,7 +321,7 @@
 
 /* Count columns */
 .sync-history__count {
-  text-align: right;
+  text-align: center;
   font-variant-numeric: tabular-nums;
   font-size: 0.875rem;
 }

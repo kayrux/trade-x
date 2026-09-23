@@ -1,21 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ExternalLink, History, Plus, X } from 'lucide-react';
-import PageLayout from '../../components/layouts/PageLayout/PageLayout';
-import { useSyncHistory } from '../../hooks/useSyncHistory';
-import { fetchChannels, addChannel } from '../../lib/api/picks';
-import './YouTuberPicks.css';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ExternalLink, History, Plus, RefreshCw, X } from "lucide-react";
+import PageLayout from "../../components/layouts/PageLayout/PageLayout";
+import TablePagination from "../../components/ui/TablePagination/TablePagination";
+import { useSyncHistory } from "../../hooks/useSyncHistory";
+import { fetchChannels, addChannel, processVideo } from "../../lib/api/picks";
+import { TABLE_PAGE_SIZE } from "../../lib/constants/index";
+import "./YouTuberPicks.css";
 
 function formatDate(iso) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 function StatusBadge({ status }) {
-  const label = status === 'done' ? 'Done' : status === 'failed' ? 'Failed' : 'Pending';
+  const label =
+    status === "done" ? "Done" : status === "failed" ? "Failed" : "Pending";
   return <span className={`picks-badge sync-status--${status}`}>{label}</span>;
 }
 
@@ -23,20 +26,22 @@ function SkeletonRows() {
   return Array.from({ length: 6 }, (_, i) => (
     <tr key={i} className="picks-table__row picks-table__row--skeleton">
       {Array.from({ length: 6 }, (_, j) => (
-        <td key={j}><span className="picks-skeleton" /></td>
+        <td key={j}>
+          <span className="picks-skeleton" />
+        </td>
       ))}
     </tr>
   ));
 }
 
 function AddChannelModal({ onClose, onAdded }) {
-  const [form, setForm] = useState({ youtube_channel_id: '', name: '' });
+  const [form, setForm] = useState({ youtube_channel_id: "", name: "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
     try {
       await addChannel(form);
@@ -50,13 +55,20 @@ function AddChannelModal({ onClose, onAdded }) {
 
   return (
     <div className="transcript-overlay" onClick={onClose}>
-      <div className="transcript-modal add-channel-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="transcript-modal add-channel-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="transcript-modal__header">
           <div className="transcript-modal__title-group">
             <h2 className="transcript-modal__title">Add Channel</h2>
-            <p className="transcript-modal__meta">Syncs the last 7 days of videos automatically.</p>
+            <p className="transcript-modal__meta">
+              Syncs the last 7 days of videos automatically.
+            </p>
           </div>
-          <button className="transcript-modal__close" onClick={onClose}><X size={16} /></button>
+          <button className="transcript-modal__close" onClick={onClose}>
+            <X size={16} />
+          </button>
         </div>
         <form className="add-channel-modal__body" onSubmit={handleSubmit}>
           <label className="add-channel-modal__label">
@@ -65,7 +77,12 @@ function AddChannelModal({ onClose, onAdded }) {
               className="add-channel-modal__input"
               placeholder="e.g. UCxxxxxxxxxxxxxxxxxxxxxx"
               value={form.youtube_channel_id}
-              onChange={(e) => setForm((f) => ({ ...f, youtube_channel_id: e.target.value.trim() }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  youtube_channel_id: e.target.value.trim(),
+                }))
+              }
               required
               autoFocus
             />
@@ -82,9 +99,19 @@ function AddChannelModal({ onClose, onAdded }) {
           </label>
           {error && <p className="add-channel-modal__error">{error}</p>}
           <div className="add-channel-modal__actions">
-            <button type="button" className="add-channel-modal__cancel" onClick={onClose}>Cancel</button>
-            <button type="submit" className="add-channel-modal__submit" disabled={loading}>
-              {loading ? 'Adding…' : 'Add Channel'}
+            <button
+              type="button"
+              className="add-channel-modal__cancel"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="add-channel-modal__submit"
+              disabled={loading}
+            >
+              {loading ? "Adding…" : "Add Channel"}
             </button>
           </div>
         </form>
@@ -96,7 +123,7 @@ function AddChannelModal({ onClose, onAdded }) {
 export default function YouTuberPicks() {
   const navigate = useNavigate();
   const [channels, setChannels] = useState([]);
-  const [channelFilter, setChannelFilter] = useState('');
+  const [channelFilter, setChannelFilter] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
 
   function loadChannels() {
@@ -109,11 +136,43 @@ export default function YouTuberPicks() {
     loadChannels();
   }, []);
 
-  const { videos, loading, error } = useSyncHistory({ channelId: channelFilter });
+  const { videos, loading, error, refresh } = useSyncHistory({
+    channelId: channelFilter,
+  });
+
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(videos.length / TABLE_PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pageVideos = videos.slice(
+    (safePage - 1) * TABLE_PAGE_SIZE,
+    safePage * TABLE_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [channelFilter]);
+
+  const [processingId, setProcessingId] = useState(null);
+
+  async function runPipeline(videoId) {
+    setProcessingId(videoId);
+    try {
+      await processVideo(videoId);
+    } catch {
+      // request-level failure; row status reflects the DB after refresh
+    } finally {
+      setProcessingId(null);
+      refresh();
+    }
+  }
 
   function handleRowClick(v) {
     navigate(`/picks/video/${v.video_id}`, {
-      state: { title: v.title, channelName: v.channel_name, youtubeVideoId: v.youtube_video_id },
+      state: {
+        title: v.title,
+        channelName: v.channel_name,
+        youtubeVideoId: v.youtube_video_id,
+      },
     });
   }
 
@@ -122,7 +181,10 @@ export default function YouTuberPicks() {
       {showAddModal && (
         <AddChannelModal
           onClose={() => setShowAddModal(false)}
-          onAdded={() => { setShowAddModal(false); loadChannels(); }}
+          onAdded={() => {
+            setShowAddModal(false);
+            loadChannels();
+          }}
         />
       )}
       <div className="picks-page">
@@ -144,7 +206,7 @@ export default function YouTuberPicks() {
             <button
               className="picks-history-btn"
               title="View sync history"
-              onClick={() => navigate('/picks/sync-history')}
+              onClick={() => navigate("/picks/sync-history")}
             >
               <History size={16} />
               <span>Sync History</span>
@@ -160,13 +222,17 @@ export default function YouTuberPicks() {
           >
             <option value="">All Channels</option>
             {channels.map((ch) => (
-              <option key={ch.id} value={ch.id}>{ch.name}</option>
+              <option key={ch.id} value={ch.id}>
+                {ch.name}
+              </option>
             ))}
           </select>
         </div>
 
         {error && (
-          <div className="picks-page__error">Failed to load videos: {error}</div>
+          <div className="picks-page__error">
+            Failed to load videos: {error}
+          </div>
         )}
 
         <div className="picks-table-wrapper">
@@ -178,7 +244,7 @@ export default function YouTuberPicks() {
                 <th>Title</th>
                 <th>Status</th>
                 <th>Picks</th>
-                <th>Resolved</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -187,21 +253,27 @@ export default function YouTuberPicks() {
               ) : videos.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="picks-table__empty">
-                    {error ? '' : 'No videos found. Add a channel to get started.'}
+                    {error
+                      ? ""
+                      : "No videos found. Add a channel to get started."}
                   </td>
                 </tr>
               ) : (
-                videos.map((v) => (
+                pageVideos.map((v) => (
                   <tr
                     key={v.video_id}
                     className="picks-table__row picks-table__row--clickable"
                     onClick={() => handleRowClick(v)}
                   >
-                    <td className="picks-table__date">{formatDate(v.published_at)}</td>
+                    <td className="picks-table__date">
+                      {formatDate(v.published_at)}
+                    </td>
                     <td className="picks-table__channel">{v.channel_name}</td>
                     <td>
                       <div className="sync-history__title-cell">
-                        <span className="sync-history__video-title">{v.title || v.youtube_video_id}</span>
+                        <span className="sync-history__video-title">
+                          {v.title || v.youtube_video_id}
+                        </span>
                         <a
                           className="picks-video-link"
                           href={`https://youtube.com/watch?v=${v.youtube_video_id}`}
@@ -214,15 +286,46 @@ export default function YouTuberPicks() {
                         </a>
                       </div>
                     </td>
-                    <td><StatusBadge status={v.status} /></td>
+                    <td>
+                      <StatusBadge
+                        status={
+                          v.video_id === processingId ? "discovered" : v.status
+                        }
+                      />
+                    </td>
                     <td className="sync-history__count">{v.picks_count}</td>
-                    <td className="sync-history__count sync-history__count--green">{v.resolved_count}</td>
+                    <td className="sync-history__actions">
+                      <button
+                        className="sync-transcript-btn"
+                        title="Re-run pipeline & save picks"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          runPipeline(v.video_id);
+                        }}
+                        disabled={v.video_id === processingId}
+                      >
+                        <RefreshCw
+                          size={14}
+                          className={v.video_id === processingId ? "spin" : ""}
+                        />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
+
+        {!loading && (
+          <TablePagination
+            page={safePage}
+            pageCount={pageCount}
+            total={videos.length}
+            pageSize={TABLE_PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        )}
       </div>
     </PageLayout>
   );

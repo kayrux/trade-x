@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ScrollText, Brain, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ScrollText, RefreshCw } from 'lucide-react';
 import PageLayout from '../../components/layouts/PageLayout/PageLayout';
+import TablePagination from '../../components/ui/TablePagination/TablePagination';
 import { useSyncHistory } from '../../hooks/useSyncHistory';
 import { fetchChannels, fetchVideoTranscript, processVideo, resyncChannels } from '../../lib/api/picks';
+import { TABLE_PAGE_SIZE } from '../../lib/constants/index';
 import './YouTuberPicks.css';
 
 function formatDate(iso) {
@@ -59,6 +61,13 @@ export default function SyncHistoryPage() {
     ? channels.find(c => c.id === channelFilter)?.last_checked_at
     : channels.reduce((latest, c) => (!latest || c.last_checked_at > latest) ? c.last_checked_at : latest, null);
 
+  const [page, setPage] = useState(1);
+  const pageCount  = Math.max(1, Math.ceil(syncVideos.length / TABLE_PAGE_SIZE));
+  const safePage   = Math.min(page, pageCount);
+  const pageVideos = syncVideos.slice((safePage - 1) * TABLE_PAGE_SIZE, safePage * TABLE_PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [channelFilter]);
+
   const [resyncState, setResyncState] = useState({ loading: false, done: false, error: null });
 
   async function handleResync() {
@@ -74,18 +83,17 @@ export default function SyncHistoryPage() {
 
   const [picksModal, setPicksModal] = useState(null);
 
-  const [geminiModal, setGeminiModal] = useState(null);
-  const [geminiData, setGeminiData]   = useState({ loading: false, result: null, error: null });
+  const [processingId, setProcessingId] = useState(null);
 
-  async function runProcess(videoId, title) {
-    setGeminiModal({ videoId, title });
-    setGeminiData({ loading: true, result: null, error: null });
+  async function runPipeline(videoId) {
+    setProcessingId(videoId);
     try {
-      const result = await processVideo(videoId);
-      setGeminiData({ loading: false, result, error: null });
+      await processVideo(videoId);
+    } catch {
+      // request-level failure; row status reflects the DB after refresh
+    } finally {
+      setProcessingId(null);
       refreshSyncHistory();
-    } catch (err) {
-      setGeminiData({ loading: false, result: null, error: err.message });
     }
   }
 
@@ -204,7 +212,7 @@ export default function SyncHistoryPage() {
                   <td colSpan={10} className="picks-table__empty">No videos found.</td>
                 </tr>
               ) : (
-                syncVideos.map((v) => (
+                pageVideos.map((v) => (
                   <tr key={v.video_id} className="picks-table__row">
                     <td className="picks-table__date">{formatDate(v.published_at)}</td>
                     <td className="picks-table__channel">{v.channel_name}</td>
@@ -221,7 +229,7 @@ export default function SyncHistoryPage() {
                         </a>
                       </div>
                     </td>
-                    <td><StatusBadge status={v.status} /></td>
+                    <td><StatusBadge status={v.video_id === processingId ? 'discovered' : v.status} /></td>
                     <td><TranscriptBadge status={v.transcript_status} /></td>
                     <td
                       className={`sync-history__count${Number(v.picks_count) > 0 ? ' sync-history__count--clickable' : ''}`}
@@ -251,9 +259,10 @@ export default function SyncHistoryPage() {
                       <button
                         className="sync-transcript-btn"
                         title="Run pipeline & save picks"
-                        onClick={() => runProcess(v.video_id, v.title)}
+                        onClick={() => runPipeline(v.video_id)}
+                        disabled={v.video_id === processingId}
                       >
-                        <Brain size={14} />
+                        <RefreshCw size={14} className={v.video_id === processingId ? 'spin' : ''} />
                       </button>
                     </td>
                   </tr>
@@ -262,6 +271,16 @@ export default function SyncHistoryPage() {
             </tbody>
           </table>
         </div>
+
+        {!syncLoading && (
+          <TablePagination
+            page={safePage}
+            pageCount={pageCount}
+            total={syncVideos.length}
+            pageSize={TABLE_PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        )}
       </div>
 
       {picksModal && (
@@ -300,43 +319,6 @@ export default function SyncHistoryPage() {
                     ))}
                   </tbody>
                 </table>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {geminiModal && (
-        <div className="transcript-overlay" onClick={() => setGeminiModal(null)}>
-          <div className="transcript-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="transcript-modal__header">
-              <div className="transcript-modal__title-group">
-                <h3 className="transcript-modal__title">{geminiModal.title}</h3>
-              </div>
-              <button className="transcript-modal__close" onClick={() => setGeminiModal(null)}>✕</button>
-            </div>
-            <div className="transcript-modal__body">
-              {geminiData.loading && (
-                <div className="transcript-modal__status">Running pipeline…</div>
-              )}
-              {!geminiData.loading && geminiData.error && (
-                <div className="transcript-modal__status transcript-modal__status--error">
-                  Request error: {geminiData.error}
-                </div>
-              )}
-              {!geminiData.loading && geminiData.result && (
-                <>
-                  {geminiData.result.status === 'done' && (
-                    <div className="transcript-modal__status transcript-modal__status--ok">
-                      Done — {geminiData.result.picksCount} pick{geminiData.result.picksCount !== 1 ? 's' : ''} saved.
-                    </div>
-                  )}
-                  {geminiData.result.status === 'failed' && (
-                    <div className="extraction-result__error">
-                      Pipeline failed: {geminiData.result.error}
-                    </div>
-                  )}
-                </>
               )}
             </div>
           </div>

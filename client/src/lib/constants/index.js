@@ -1,5 +1,7 @@
 export const API_BASE_URL = 'http://localhost:4000';
 
+export const TABLE_PAGE_SIZE = 20;
+
 export const MIC_NAMES = {
   XNAS: 'NASDAQ',
   XNYS: 'NYSE',
