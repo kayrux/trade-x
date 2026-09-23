@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ScrollText, RefreshCw } from 'lucide-react';
 import PageLayout from '../../components/layouts/PageLayout/PageLayout';
+import TablePagination from '../../components/ui/TablePagination/TablePagination';
 import { useSyncHistory } from '../../hooks/useSyncHistory';
 import { fetchChannels, fetchVideoTranscript, processVideo, resyncChannels } from '../../lib/api/picks';
+import { TABLE_PAGE_SIZE } from '../../lib/constants/index';
 import './YouTuberPicks.css';
 
 function formatDate(iso) {
@@ -58,6 +60,13 @@ export default function SyncHistoryPage() {
   const lastSyncedAt   = channelFilter
     ? channels.find(c => c.id === channelFilter)?.last_checked_at
     : channels.reduce((latest, c) => (!latest || c.last_checked_at > latest) ? c.last_checked_at : latest, null);
+
+  const [page, setPage] = useState(1);
+  const pageCount  = Math.max(1, Math.ceil(syncVideos.length / TABLE_PAGE_SIZE));
+  const safePage   = Math.min(page, pageCount);
+  const pageVideos = syncVideos.slice((safePage - 1) * TABLE_PAGE_SIZE, safePage * TABLE_PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [channelFilter]);
 
   const [resyncState, setResyncState] = useState({ loading: false, done: false, error: null });
 
@@ -203,7 +212,7 @@ export default function SyncHistoryPage() {
                   <td colSpan={10} className="picks-table__empty">No videos found.</td>
                 </tr>
               ) : (
-                syncVideos.map((v) => (
+                pageVideos.map((v) => (
                   <tr key={v.video_id} className="picks-table__row">
                     <td className="picks-table__date">{formatDate(v.published_at)}</td>
                     <td className="picks-table__channel">{v.channel_name}</td>
@@ -262,6 +271,16 @@ export default function SyncHistoryPage() {
             </tbody>
           </table>
         </div>
+
+        {!syncLoading && (
+          <TablePagination
+            page={safePage}
+            pageCount={pageCount}
+            total={syncVideos.length}
+            pageSize={TABLE_PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        )}
       </div>
 
       {picksModal && (

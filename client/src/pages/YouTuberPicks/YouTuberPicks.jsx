@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ExternalLink, History, Plus, RefreshCw, X } from "lucide-react";
 import PageLayout from "../../components/layouts/PageLayout/PageLayout";
+import TablePagination from "../../components/ui/TablePagination/TablePagination";
 import { useSyncHistory } from "../../hooks/useSyncHistory";
 import { fetchChannels, addChannel, processVideo } from "../../lib/api/picks";
+import { TABLE_PAGE_SIZE } from "../../lib/constants/index";
 import "./YouTuberPicks.css";
 
 function formatDate(iso) {
@@ -23,7 +25,7 @@ function StatusBadge({ status }) {
 function SkeletonRows() {
   return Array.from({ length: 6 }, (_, i) => (
     <tr key={i} className="picks-table__row picks-table__row--skeleton">
-      {Array.from({ length: 7 }, (_, j) => (
+      {Array.from({ length: 6 }, (_, j) => (
         <td key={j}>
           <span className="picks-skeleton" />
         </td>
@@ -138,6 +140,18 @@ export default function YouTuberPicks() {
     channelId: channelFilter,
   });
 
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(videos.length / TABLE_PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pageVideos = videos.slice(
+    (safePage - 1) * TABLE_PAGE_SIZE,
+    safePage * TABLE_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [channelFilter]);
+
   const [processingId, setProcessingId] = useState(null);
 
   async function runPipeline(videoId) {
@@ -238,14 +252,14 @@ export default function YouTuberPicks() {
                 <SkeletonRows />
               ) : videos.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="picks-table__empty">
+                  <td colSpan={6} className="picks-table__empty">
                     {error
                       ? ""
                       : "No videos found. Add a channel to get started."}
                   </td>
                 </tr>
               ) : (
-                videos.map((v) => (
+                pageVideos.map((v) => (
                   <tr
                     key={v.video_id}
                     className="picks-table__row picks-table__row--clickable"
@@ -302,6 +316,16 @@ export default function YouTuberPicks() {
             </tbody>
           </table>
         </div>
+
+        {!loading && (
+          <TablePagination
+            page={safePage}
+            pageCount={pageCount}
+            total={videos.length}
+            pageSize={TABLE_PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        )}
       </div>
     </PageLayout>
   );
