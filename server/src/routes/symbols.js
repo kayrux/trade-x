@@ -1,10 +1,10 @@
 const express = require("express");
 const axios = require("axios");
 const pool = require("../db");
+const { QUOTE_STALE_MS, isCommodity, refreshQuote } = require("../lib/quotes");
 
 const router = express.Router();
 
-const QUOTE_STALE_MS = 30 * 1000; // 30 seconds
 const PROFILE_STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Market-snapshot tiles.  `source` picks the data path:
@@ -239,11 +239,10 @@ router.get("/:symbol", async (req, res) => {
 
     // Commodities (Alpha Vantage) have no Finnhub quote/profile — serve them
     // straight from the latest stored daily candle and skip the live refresh.
-    const isCommodity =
-      row.exchange === "COMMODITY" || String(row.id).startsWith("AV:");
+    const commodity = isCommodity(row.id, row.exchange);
 
     const isStale =
-      !isCommodity &&
+      !commodity &&
       (!row.synced_at ||
         Date.now() - new Date(row.synced_at).getTime() > QUOTE_STALE_MS);
 
@@ -263,7 +262,7 @@ router.get("/:symbol", async (req, res) => {
     }
 
     const profileStale =
-      !isCommodity &&
+      !commodity &&
       (!row.profile_synced_at ||
         Date.now() - new Date(row.profile_synced_at).getTime() > PROFILE_STALE_MS);
 
@@ -311,37 +310,6 @@ router.get("/:symbol", async (req, res) => {
     res.status(500).json({ error: "Database error" });
   }
 });
-
-async function refreshQuote(symbolId, ticker) {
-  const { data } = await axios.get("https://finnhub.io/api/v1/quote", {
-    params: { symbol: ticker, token: process.env.FINNHUB_API_KEY },
-  });
-
-  const synced_at = new Date();
-  await pool.query(
-    `INSERT INTO symbol_quotes (symbol_id, last_price, open, high, low, volume, prev_close, synced_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-     ON CONFLICT (symbol_id) DO UPDATE SET
-       last_price = EXCLUDED.last_price,
-       open       = EXCLUDED.open,
-       high       = EXCLUDED.high,
-       low        = EXCLUDED.low,
-       volume     = EXCLUDED.volume,
-       prev_close = EXCLUDED.prev_close,
-       synced_at  = EXCLUDED.synced_at`,
-    [symbolId, data.c, data.o, data.h, data.l, data.v, data.pc],
-  );
-
-  return {
-    last_price: data.c,
-    open: data.o,
-    high: data.h,
-    low: data.l,
-    volume: data.v,
-    prev_close: data.pc,
-    synced_at,
-  };
-}
 
 async function refreshProfile(symbolId, ticker) {
   const [profileRes, metricRes] = await Promise.all([
