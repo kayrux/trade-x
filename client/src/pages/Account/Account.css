@@ -1,0 +1,71 @@
+.account {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 16px;
+}
+
+.account__title {
+  margin: 0 0 24px;
+  font-size: 1.5rem;
+  color: var(--color-text-primary);
+}
+
+.account__card {
+  background: var(--color-navbar-bg);
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 12px;
+  padding: 8px 24px;
+}
+
+.account__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-navbar-border);
+}
+
+.account__row:last-child {
+  border-bottom: none;
+}
+
+.account__label {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.account__value {
+  font-size: 0.9375rem;
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.account__badge {
+  display: inline-block;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.account__actions {
+  margin-top: 24px;
+}
+
+.account__logout {
+  background: none;
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.account__logout:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}

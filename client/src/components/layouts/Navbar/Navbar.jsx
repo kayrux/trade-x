@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
 import logoDark from '../../../assets/images/tradex-logo-dark.svg';
 import logoLight from '../../../assets/images/tradex-logo-light.svg';
 import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
@@ -12,9 +13,11 @@ import './Navbar.css';
 
 function Navbar() {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [recents, addRecentSymbol, clearRecentSymbols] = useRecentSymbols();
   const searchInputRef = useRef(null);
 
@@ -28,6 +31,17 @@ function Navbar() {
     setQuery('');
     setFocused(false);
     searchInputRef.current?.blur();
+  }
+
+  function handleAccountNav(path) {
+    setAccountOpen(false);
+    navigate(path);
+  }
+
+  function handleLogout() {
+    setAccountOpen(false);
+    logout();
+    navigate('/');
   }
 
   return (
@@ -69,9 +83,60 @@ function Navbar() {
         <button className="navbar__icon-btn" aria-label="Toggle theme" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
         </button>
-        <button className="navbar__icon-btn" aria-label="Account">
-          <User size={22} />
-        </button>
+        <div className="navbar__account">
+          <button
+            className="navbar__icon-btn"
+            aria-label="Account"
+            aria-expanded={accountOpen}
+            aria-haspopup="menu"
+            onClick={() => setAccountOpen((open) => !open)}
+            // Same blur-delay trick the search dropdown uses, so a click on a
+            // menu item lands before the menu unmounts.
+            onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
+          >
+            <User size={22} />
+          </button>
+          {accountOpen && (
+            <div className="navbar__menu" role="menu">
+              {user ? (
+                <>
+                  <div className="navbar__menu-header">{user.username}</div>
+                  <button
+                    className="navbar__menu-item"
+                    role="menuitem"
+                    onClick={() => handleAccountNav('/account')}
+                  >
+                    Account
+                  </button>
+                  <button
+                    className="navbar__menu-item"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="navbar__menu-item"
+                    role="menuitem"
+                    onClick={() => handleAccountNav('/login')}
+                  >
+                    Log in
+                  </button>
+                  <button
+                    className="navbar__menu-item"
+                    role="menuitem"
+                    onClick={() => handleAccountNav('/register')}
+                  >
+                    Create account
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );

@@ -10,6 +10,8 @@ const candlesRouter = require('./src/routes/candles');
 const newsRouter = require('./src/routes/news');
 const channelsRouter = require('./src/routes/channels');
 const picksRouter = require('./src/routes/picks');
+const authRouter = require('./src/routes/auth');
+const { attachUser } = require('./src/middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -17,6 +19,11 @@ const PORT = process.env.PORT || 4000;
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
 
+// Populates req.user when a valid Bearer token is present. Never rejects —
+// per-route requireAuth/requireAdmin do the gating.
+app.use(attachUser);
+
+app.use('/auth', authRouter);
 app.use('/symbols', symbolsRouter);
 app.use('/candles', candlesRouter);
 app.use('/news', newsRouter);
