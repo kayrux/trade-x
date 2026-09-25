@@ -4,6 +4,7 @@ import { ExternalLink, History, Plus, RefreshCw, X } from "lucide-react";
 import PageLayout from "../../components/layouts/PageLayout/PageLayout";
 import TablePagination from "../../components/ui/TablePagination/TablePagination";
 import { useSyncHistory } from "../../hooks/useSyncHistory";
+import { useAuth } from "../../context/AuthContext";
 import { fetchChannels, addChannel, processVideo } from "../../lib/api/picks";
 import { TABLE_PAGE_SIZE } from "../../lib/constants/index";
 import "./YouTuberPicks.css";
@@ -122,6 +123,9 @@ function AddChannelModal({ onClose, onAdded }) {
 
 export default function YouTuberPicks() {
   const navigate = useNavigate();
+  // Pipeline controls are admin-only on the server; hiding them here is
+  // cosmetic, so a non-admin isn't offered buttons that would 403.
+  const { isAdmin } = useAuth();
   const [channels, setChannels] = useState([]);
   const [channelFilter, setChannelFilter] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -196,13 +200,15 @@ export default function YouTuberPicks() {
             </p>
           </div>
           <div className="picks-header-actions">
-            <button
-              className="picks-add-btn"
-              onClick={() => setShowAddModal(true)}
-            >
-              <Plus size={16} />
-              <span>Add Channel</span>
-            </button>
+            {isAdmin && (
+              <button
+                className="picks-add-btn"
+                onClick={() => setShowAddModal(true)}
+              >
+                <Plus size={16} />
+                <span>Add Channel</span>
+              </button>
+            )}
             <button
               className="picks-history-btn"
               title="View sync history"
@@ -294,21 +300,25 @@ export default function YouTuberPicks() {
                       />
                     </td>
                     <td className="sync-history__count">{v.picks_count}</td>
+                    {/* Cell is kept for non-admins so the column count still
+                        matches the header and the empty-state colSpan. */}
                     <td className="sync-history__actions">
-                      <button
-                        className="sync-transcript-btn"
-                        title="Re-run pipeline & save picks"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          runPipeline(v.video_id);
-                        }}
-                        disabled={v.video_id === processingId}
-                      >
-                        <RefreshCw
-                          size={14}
-                          className={v.video_id === processingId ? "spin" : ""}
-                        />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          className="sync-transcript-btn"
+                          title="Re-run pipeline & save picks"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            runPipeline(v.video_id);
+                          }}
+                          disabled={v.video_id === processingId}
+                        >
+                          <RefreshCw
+                            size={14}
+                            className={v.video_id === processingId ? "spin" : ""}
+                          />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

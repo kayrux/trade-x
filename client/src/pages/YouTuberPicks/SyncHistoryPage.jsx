@@ -4,6 +4,7 @@ import { ArrowLeft, ScrollText, RefreshCw } from 'lucide-react';
 import PageLayout from '../../components/layouts/PageLayout/PageLayout';
 import TablePagination from '../../components/ui/TablePagination/TablePagination';
 import { useSyncHistory } from '../../hooks/useSyncHistory';
+import { useAuth } from '../../context/AuthContext';
 import { fetchChannels, fetchVideoTranscript, processVideo, resyncChannels } from '../../lib/api/picks';
 import { TABLE_PAGE_SIZE } from '../../lib/constants/index';
 import './YouTuberPicks.css';
@@ -37,6 +38,9 @@ function SyncSkeletonRows() {
 
 export default function SyncHistoryPage() {
   const navigate = useNavigate();
+  // Resync, pipeline re-runs, and transcript fetches are admin-only on the
+  // server — each one spends YouTube/Gemini quota.
+  const { isAdmin } = useAuth();
   const [channels, setChannels] = useState([]);
   const [channelFilter, setChannelFilter] = useState('');
 
@@ -124,15 +128,17 @@ export default function SyncHistoryPage() {
             </p>
           </div>
           <div className="picks-header-actions">
-            <button
-              className="sync-resync-btn"
-              onClick={handleResync}
-              disabled={resyncState.loading}
-              title="Fetch latest videos from the last 7 days"
-            >
-              <RefreshCw size={14} className={resyncState.loading ? 'spin' : ''} />
-              {resyncState.loading ? 'Syncing…' : 'Resync Last 7 Days'}
-            </button>
+            {isAdmin && (
+              <button
+                className="sync-resync-btn"
+                onClick={handleResync}
+                disabled={resyncState.loading}
+                title="Fetch latest videos from the last 7 days"
+              >
+                <RefreshCw size={14} className={resyncState.loading ? 'spin' : ''} />
+                {resyncState.loading ? 'Syncing…' : 'Resync Last 7 Days'}
+              </button>
+            )}
           </div>
         </div>
         {resyncState.done && (
@@ -248,22 +254,28 @@ export default function SyncHistoryPage() {
                         ? v.error_detail.slice(0, 60) + (v.error_detail.length > 60 ? '…' : '')
                         : <span className="sync-transcript--none">—</span>}
                     </td>
+                    {/* Cell is kept for non-admins so the column count still
+                        matches the header and the empty-state colSpan. */}
                     <td className="sync-history__actions">
-                      <button
-                        className="sync-transcript-btn"
-                        title="View transcript"
-                        onClick={() => openTranscript(v.video_id, v.title)}
-                      >
-                        <ScrollText size={14} />
-                      </button>
-                      <button
-                        className="sync-transcript-btn"
-                        title="Run pipeline & save picks"
-                        onClick={() => runPipeline(v.video_id)}
-                        disabled={v.video_id === processingId}
-                      >
-                        <RefreshCw size={14} className={v.video_id === processingId ? 'spin' : ''} />
-                      </button>
+                      {isAdmin && (
+                        <>
+                          <button
+                            className="sync-transcript-btn"
+                            title="View transcript"
+                            onClick={() => openTranscript(v.video_id, v.title)}
+                          >
+                            <ScrollText size={14} />
+                          </button>
+                          <button
+                            className="sync-transcript-btn"
+                            title="Run pipeline & save picks"
+                            onClick={() => runPipeline(v.video_id)}
+                            disabled={v.video_id === processingId}
+                          >
+                            <RefreshCw size={14} className={v.video_id === processingId ? 'spin' : ''} />
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))

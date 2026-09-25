@@ -1,0 +1,147 @@
+.account {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 40px 16px;
+}
+
+.account__grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .account__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left profile card */
+.account__profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-navbar-bg);
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 12px;
+  padding: 32px 24px;
+}
+
+.account__name {
+  margin: 4px 0 0;
+  font-size: 1.125rem;
+  color: var(--color-text-primary);
+}
+
+.account__profile-btn {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.account__profile-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.account__logout:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* Avatar picker, revealed by "Change avatar" */
+.account__avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.account__avatar-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.account__avatar-option:hover:not(:disabled) {
+  border-color: var(--color-accent-subtle);
+  transform: scale(1.05);
+}
+
+.account__avatar-option:disabled {
+  cursor: default;
+}
+
+.account__avatar-option--selected {
+  border-color: var(--color-accent);
+}
+
+.account__avatar-error {
+  font-size: 0.8125rem;
+  color: var(--color-error);
+  text-align: center;
+}
+
+/* Right details card */
+.account__card {
+  background: var(--color-navbar-bg);
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 12px;
+  padding: 0 24px;
+}
+
+.account__card-header {
+  padding: 16px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-navbar-border);
+}
+
+.account__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-navbar-border);
+}
+
+.account__row:last-child {
+  border-bottom: none;
+}
+
+.account__label {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.account__value {
+  font-size: 0.9375rem;
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.account__badge {
+  display: inline-block;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}

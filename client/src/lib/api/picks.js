@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../constants/index';
+import { authFetch } from './auth';
 
 export async function fetchPicks({ channelId, symbol, sentiment, videoId } = {}) {
   const params = new URLSearchParams();
@@ -19,8 +20,10 @@ export async function fetchChannels() {
   return res.json();
 }
 
+// The four calls below hit admin-gated routes — they go through authFetch so
+// the Bearer token is attached. Everything else here is public.
 export async function addChannel({ youtube_channel_id, name }) {
-  const res = await fetch(`${API_BASE_URL}/channels`, {
+  const res = await authFetch(`${API_BASE_URL}/channels`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ youtube_channel_id, name }),
@@ -33,19 +36,19 @@ export async function addChannel({ youtube_channel_id, name }) {
 }
 
 export async function processVideo(videoId) {
-  const res = await fetch(`${API_BASE_URL}/channels/videos/${videoId}/process`, { method: 'POST' });
+  const res = await authFetch(`${API_BASE_URL}/channels/videos/${videoId}/process`, { method: 'POST' });
   if (!res.ok) throw new Error(`Process failed: ${res.status}`);
   return res.json(); // { status, picksCount, error }
 }
 
 export async function fetchVideoTranscript(videoId) {
-  const res = await fetch(`${API_BASE_URL}/channels/videos/${videoId}/transcript`);
+  const res = await authFetch(`${API_BASE_URL}/channels/videos/${videoId}/transcript`);
   if (!res.ok) throw new Error(`Transcript fetch failed: ${res.status}`);
   return res.json();
 }
 
 export async function resyncChannels(channelId = null) {
-  const res = await fetch(`${API_BASE_URL}/channels/sync`, {
+  const res = await authFetch(`${API_BASE_URL}/channels/sync`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(channelId ? { channel_id: channelId } : {}),
