@@ -42,6 +42,7 @@ function publicUser(row) {
     email: row.email,
     username: row.username,
     display_name: row.display_name,
+    avatar: row.avatar,
     is_admin: row.is_admin,
     created_at: row.created_at,
   };

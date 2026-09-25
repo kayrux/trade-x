@@ -9,6 +9,7 @@ import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
 import { useRecentSymbols } from '../../../hooks/useRecentSymbols';
 import SearchBar from '../../forms/SearchBar/SearchBar';
 import SymbolSearchResults from '../../ui/SymbolSearchResults/SymbolSearchResults';
+import Avatar from '../../ui/Avatar/Avatar';
 import './Navbar.css';
 
 function Navbar() {
@@ -94,13 +95,21 @@ function Navbar() {
             // menu item lands before the menu unmounts.
             onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
           >
-            <User size={22} />
+            {user ? <Avatar avatarKey={user.avatar} size={26} /> : <User size={22} />}
           </button>
           {accountOpen && (
             <div className="navbar__menu" role="menu">
               {user ? (
                 <>
-                  <div className="navbar__menu-header">{user.username}</div>
+                  <div className="navbar__menu-header">
+                    <Avatar avatarKey={user.avatar} size={40} />
+                    <div className="navbar__menu-identity">
+                      <span className="navbar__menu-username">{user.username}</span>
+                      {user.display_name && user.display_name !== user.username && (
+                        <span className="navbar__menu-name">{user.display_name}</span>
+                      )}
+                    </div>
+                  </div>
                   <button
                     className="navbar__menu-item"
                     role="menuitem"

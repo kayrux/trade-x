@@ -7,6 +7,7 @@ const {
   publicUser,
 } = require('../lib/auth');
 const { requireAuth } = require('../middleware/auth');
+const { isValidAvatar } = require('../lib/avatars');
 
 const router = express.Router();
 
@@ -110,6 +111,31 @@ router.get('/me', requireAuth, async (req, res) => {
     ]);
     if (rows.length === 0) {
       // Token is valid but the account is gone — treat as logged out.
+      return res.status(401).json({ error: 'Account no longer exists' });
+    }
+    res.json({ user: publicUser(rows[0]) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// PATCH /auth/me — update the current user's profile avatar. Only the avatar
+// key is accepted, and only from the server-side whitelist; null resets to the
+// default (dog) avatar.
+router.patch('/me', requireAuth, async (req, res) => {
+  const { avatar } = req.body;
+
+  if (!isValidAvatar(avatar)) {
+    return res.status(400).json({ error: 'Invalid avatar' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE users SET avatar = $1 WHERE id = $2 RETURNING *`,
+      [avatar, req.user.id],
+    );
+    if (rows.length === 0) {
       return res.status(401).json({ error: 'Account no longer exists' });
     }
     res.json({ user: publicUser(rows[0]) });

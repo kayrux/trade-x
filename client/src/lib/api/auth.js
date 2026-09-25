@@ -73,3 +73,16 @@ export async function fetchMe() {
   const { user } = await res.json();
   return user;
 }
+
+// PATCH the current user's avatar. Pass a key from the avatar manifest, or null
+// to reset to the default. Authed mutation, so it goes through authFetch.
+export async function updateAvatar(avatar) {
+  const res = await authFetch(`${API_BASE_URL}/auth/me`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatar }),
+  });
+  if (!res.ok) await throwFromResponse(res, 'Could not update avatar');
+  const { user } = await res.json();
+  return user;
+}

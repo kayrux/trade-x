@@ -226,6 +226,7 @@ CREATE TABLE users (
     username      VARCHAR UNIQUE NOT NULL,
     password_hash VARCHAR NOT NULL,
     display_name  VARCHAR,
+    avatar        VARCHAR,           -- profile avatar key (migration 005); NULL renders the default
     is_admin      BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMP DEFAULT NOW()
 );
