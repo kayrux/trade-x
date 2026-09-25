@@ -18,6 +18,18 @@
   --sidebar-width: 232px;
   --sidebar-width-collapsed: 64px;
   --watchlist-width: 300px;
+
+  /* Semantic message colors. The tinted-bg / 0.4-alpha-border / solid-text
+     triple is the house recipe for a message surface (cf. .auth__error). */
+  --color-success: #4ade80;
+  --color-success-bg: rgba(34, 197, 94, 0.12);
+  --color-success-border: rgba(34, 197, 94, 0.4);
+  --color-error: #ef4444;
+  --color-error-bg: rgba(239, 68, 68, 0.12);
+  --color-error-border: rgba(239, 68, 68, 0.4);
+  --color-info: var(--color-accent);
+  --color-info-bg: rgba(14, 165, 233, 0.12);
+  --color-info-border: rgba(14, 165, 233, 0.4);
 }
 
 [data-theme="light"] {
@@ -35,4 +47,10 @@
   --color-border: #e2e8f0;
   --color-pos: #16a34a;
   --color-neg: #dc2626;
+
+  /* Only the text colors need darkening — the tints and borders above read
+     correctly on a light surface, so they inherit. */
+  --color-success: #15803d;
+  --color-error: #b91c1c;
+  --color-info: #0369a1;
 }

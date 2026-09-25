@@ -1,35 +1,28 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
 import { useRecentSymbols } from '../../../hooks/useRecentSymbols';
 import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
 import SearchBar from '../../forms/SearchBar/SearchBar';
 import SymbolSearchResults from '../../ui/SymbolSearchResults/SymbolSearchResults';
+import Avatar from '../../ui/Avatar/Avatar';
 import './Navbar.css';
 
 function Navbar() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [recents, addRecentSymbol, clearRecentSymbols] = useRecentSymbols();
   const searchInputRef = useRef(null);
-  const accountRef = useRef(null);
 
   const { results, loading, error } = useSymbolSearch(query);
   const hasQuery = query.trim().length > 0;
   const showDropdown = focused && (hasQuery || recents.length > 0);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onDocClick(e) {
-      if (accountRef.current && !accountRef.current.contains(e.target)) setMenuOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [menuOpen]);
 
   function handleSelect(result) {
     addRecentSymbol(result);
@@ -37,6 +30,17 @@ function Navbar() {
     setQuery('');
     setFocused(false);
     searchInputRef.current?.blur();
+  }
+
+  function handleAccountNav(path) {
+    setAccountOpen(false);
+    navigate(path);
+  }
+
+  function handleLogout() {
+    setAccountOpen(false);
+    logout();
+    navigate('/');
   }
 
   return (
@@ -70,27 +74,65 @@ function Navbar() {
           {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
         </button>
 
-        <div className="navbar__account" ref={accountRef}>
+        <div className="navbar__account">
           <button
             className="navbar__icon-btn"
             aria-label="Account"
+            aria-expanded={accountOpen}
             aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((o) => !o)}
+            onClick={() => setAccountOpen((open) => !open)}
+            // Same blur-delay trick the search dropdown uses, so a click on a
+            // menu item lands before the menu unmounts.
+            onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
           >
-            <User size={22} />
+            {user ? <Avatar avatarKey={user.avatar} size={26} /> : <User size={22} />}
           </button>
-          {menuOpen && (
-            <div className="navbar__account-menu" role="menu">
-              <div className="navbar__account-header">
-                <span className="navbar__avatar" aria-hidden="true">
-                  <User size={18} />
-                </span>
-                <div className="navbar__account-info">
-                  <span className="navbar__account-name">Account</span>
-                  <span className="navbar__account-role">Signed in</span>
-                </div>
-              </div>
+          {accountOpen && (
+            <div className="navbar__menu" role="menu">
+              {user ? (
+                <>
+                  <div className="navbar__menu-header">
+                    <Avatar avatarKey={user.avatar} size={40} />
+                    <div className="navbar__menu-identity">
+                      <span className="navbar__menu-username">{user.username}</span>
+                      {user.display_name && user.display_name !== user.username && (
+                        <span className="navbar__menu-name">{user.display_name}</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    className="navbar__menu-item"
+                    role="menuitem"
+                    onClick={() => handleAccountNav('/account')}
+                  >
+                    Account
+                  </button>
+                  <button
+                    className="navbar__menu-item"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="navbar__menu-item"
+                    role="menuitem"
+                    onClick={() => handleAccountNav('/login')}
+                  >
+                    Log in
+                  </button>
+                  <button
+                    className="navbar__menu-item"
+                    role="menuitem"
+                    onClick={() => handleAccountNav('/register')}
+                  >
+                    Create account
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

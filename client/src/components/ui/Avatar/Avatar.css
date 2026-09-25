@@ -1,0 +1,8 @@
+.avatar {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-input-bg);
+  /* The pixel-art SVGs are intentionally crisp — don't blur on downscale. */
+  image-rendering: pixelated;
+}

@@ -4,11 +4,16 @@ const { resolveUploadsPlaylistId } = require('../lib/youtubeClient');
 const { processChannel, runPipeline, resyncAllChannels } = require('../jobs/syncVideos');
 const { fetchTranscript, formatForLLM } = require('../lib/transcriptFetcher');
 const { extractPicksDebug } = require('../lib/geminiExtractor');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Mutating and debug handlers below are admin-gated because each one spends
+// YouTube API or Gemini quota. The plain GETs stay public so the app is fully
+// browsable without an account.
+
 // POST /channels — add a new tracked channel and kick off a 7-day backfill
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   const { youtube_channel_id, name } = req.body;
   if (!youtube_channel_id || !name) {
     return res.status(400).json({ error: 'youtube_channel_id and name are required' });
@@ -51,7 +56,7 @@ router.post('/', async (req, res) => {
 });
 
 // POST /channels/videos/:id/process — run the full pipeline for one video on demand
-router.post('/videos/:id/process', async (req, res) => {
+router.post('/videos/:id/process', requireAdmin, async (req, res) => {
   let video;
   try {
     const { rows } = await pool.query(
@@ -89,7 +94,7 @@ router.post('/videos/:id/process', async (req, res) => {
 });
 
 // GET /channels/videos/:id/extract-debug — run Gemini extraction live and return raw response
-router.get('/videos/:id/extract-debug', async (req, res) => {
+router.get('/videos/:id/extract-debug', requireAdmin, async (req, res) => {
   let youtubeVideoId;
   try {
     const { rows } = await pool.query(
@@ -125,7 +130,7 @@ router.get('/videos/:id/extract-debug', async (req, res) => {
 });
 
 // GET /channels/videos/:id/transcript — fetch live transcript for a video (debugging)
-router.get('/videos/:id/transcript', async (req, res) => {
+router.get('/videos/:id/transcript', requireAdmin, async (req, res) => {
   let youtubeVideoId;
   try {
     const { rows } = await pool.query(
@@ -203,7 +208,7 @@ router.get('/videos', async (req, res) => {
 });
 
 // POST /channels/sync — manually trigger a 7-day resync for all (or one) active channel(s)
-router.post('/sync', (req, res) => {
+router.post('/sync', requireAdmin, (req, res) => {
   const { channel_id } = req.body;
   res.status(202).json({ message: 'Resync started' });
   setImmediate(() =>
@@ -227,7 +232,7 @@ router.get('/', async (req, res) => {
 });
 
 // DELETE /channels/:id — deactivate a channel (soft delete)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     await pool.query(
       `UPDATE tracked_channels SET is_active = FALSE WHERE id = $1`,
