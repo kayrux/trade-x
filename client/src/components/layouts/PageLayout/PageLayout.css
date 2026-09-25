@@ -1,7 +1,14 @@
 .page-layout {
   display: flex;
-  flex-direction: column;
+  align-items: stretch;
   min-height: 100vh;
+}
+
+.page-layout__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-layout__content {

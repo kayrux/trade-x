@@ -8,6 +8,16 @@
   --color-text-muted: #64748b;
   --color-input-bg: #1e2430;
   --navbar-height: 60px;
+
+  /* Sidebar / watchlist chrome */
+  --color-surface: #13171f;
+  --color-surface-hover: #1b212c;
+  --color-border: #1e2430;
+  --color-pos: #22c55e;
+  --color-neg: #ef4444;
+  --sidebar-width: 232px;
+  --sidebar-width-collapsed: 64px;
+  --watchlist-width: 300px;
 }
 
 [data-theme="light"] {
@@ -19,4 +29,10 @@
   --color-input-bg: #f1f5f9;
   --color-accent: #0ea5e9;
   --color-accent-subtle: rgba(14, 165, 233, 0.38);
+
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-pos: #16a34a;
+  --color-neg: #dc2626;
 }
