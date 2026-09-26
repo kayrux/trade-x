@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Plus, Settings } from 'lucide-react';
 import MarketStatus from '../../ui/MarketStatus/MarketStatus';
+import Tooltip from '../../ui/Tooltip/Tooltip';
 import ManageWatchlistsModal from '../../ui/ManageWatchlistsModal/ManageWatchlistsModal';
 import NewWatchlistModal from '../../ui/NewWatchlistModal/NewWatchlistModal';
 import { useWatchlists } from '../../../context/WatchlistContext';
@@ -105,15 +106,17 @@ function WatchlistPanel({ collapsed }) {
         <span className="watchlist__title">Watchlist</span>
 
         <div className="watchlist__selector" ref={menuRef}>
-          <button
-            className="watchlist__selector-btn"
-            onClick={() => setMenuOpen((o) => !o)}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-          >
-            <span className="watchlist__selector-name">{activeWatchlist?.name ?? 'Watchlist'}</span>
-            <ChevronDown size={14} />
-          </button>
+          <Tooltip label="Switch watchlist">
+            <button
+              className="watchlist__selector-btn"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+            >
+              <span className="watchlist__selector-name">{activeWatchlist?.name ?? 'Watchlist'}</span>
+              <ChevronDown size={14} />
+            </button>
+          </Tooltip>
           {menuOpen && (
             <div className="watchlist__menu" role="menu">
               {watchlists.map((w) => (

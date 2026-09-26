@@ -4,12 +4,14 @@ import './Tooltip.css';
 
 const GAP = 8;
 const ESTIMATED_HEIGHT = 30; // enough to decide whether below still fits
+const ESTIMATED_WIDTH = 150; // ditto, for deciding right vs left
 const EDGE = 8;
 
 // Renders into document.body with fixed coordinates, so scroll containers and
 // `overflow: hidden` ancestors can't clip it. Takes a single DOM-element child
 // and chains onto whatever handlers that child already has.
-function Tooltip({ label, children }) {
+// `placement` is a preference — each axis flips when there isn't room.
+function Tooltip({ label, placement = 'bottom', children }) {
   const triggerRef = useRef(null);
   const [pos, setPos] = useState(null);
 
@@ -17,11 +19,22 @@ function Tooltip({ label, children }) {
     const el = triggerRef.current;
     if (!el || !label) return;
     const rect = el.getBoundingClientRect();
+
+    if (placement === 'right') {
+      const fits = rect.right + GAP + ESTIMATED_WIDTH <= window.innerWidth;
+      setPos({
+        x: fits ? rect.right + GAP : rect.left - GAP,
+        y: rect.top + rect.height / 2,
+        mode: fits ? 'right' : 'left',
+      });
+      return;
+    }
+
     const below = rect.bottom + GAP + ESTIMATED_HEIGHT <= window.innerHeight;
     setPos({
       x: Math.min(Math.max(rect.left + rect.width / 2, EDGE), window.innerWidth - EDGE),
       y: below ? rect.bottom + GAP : rect.top - GAP,
-      above: !below,
+      mode: below ? 'bottom' : 'above',
     });
   }
 
@@ -57,7 +70,7 @@ function Tooltip({ label, children }) {
       {child}
       {pos && label && createPortal(
         <span
-          className={`tooltip${pos.above ? ' tooltip--above' : ''}`}
+          className={`tooltip tooltip--${pos.mode}`}
           role="tooltip"
           style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
         >

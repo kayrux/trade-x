@@ -143,24 +143,5 @@
   display: none;
 }
 
-/* ---- Collapsed tooltips ---- */
-.sidebar--collapsed [data-tooltip] {
-  position: relative;
-}
-
-.sidebar--collapsed [data-tooltip]:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--color-text-primary);
-  color: var(--color-bg-dark);
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 300;
-}
+/* Tooltips come from the portal-rendered <Tooltip> component — an in-flow
+   ::after would be clipped by this column's overflow. */
