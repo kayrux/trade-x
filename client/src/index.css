@@ -14,3 +14,33 @@ body {
   background-color: var(--color-bg-dark);
   color: var(--color-text-primary);
 }
+
+/* Scrollbars, themed once for every scroll container. Components that want no
+   bar at all (cf. .home__snapshot-row) override with a class selector. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Transparent border + padding-box clip insets the thumb into a pill. */
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
