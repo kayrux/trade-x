@@ -10,7 +10,7 @@ import { useWatchlists } from '../../../context/WatchlistContext';
 import { getMicName } from '../../../lib/constants';
 import './ManageWatchlistsModal.css';
 
-function ManageWatchlistsModal({ onClose }) {
+function ManageWatchlistsModal({ onClose, initialSelectedId }) {
   const {
     watchlists, activeId, createWatchlist, deleteWatchlist, renameWatchlist,
     addSymbol, removeSymbol, reorderSymbols,
@@ -18,7 +18,7 @@ function ManageWatchlistsModal({ onClose }) {
 
   // Selection here is local: browsing lists in the dialog must not move the
   // sidebar off the list it is showing.
-  const [selectedId, setSelectedId] = useState(activeId);
+  const [selectedId, setSelectedId] = useState(initialSelectedId ?? activeId);
   const selected = watchlists.find((w) => w.id === selectedId) ?? watchlists[0];
   const symbols = selected?.symbols ?? [];
   const { quotes } = useWatchlistQuotes(symbols);

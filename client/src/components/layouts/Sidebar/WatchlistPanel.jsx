@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Plus, Settings } from 'lucide-react';
 import MarketStatus from '../../ui/MarketStatus/MarketStatus';
 import ManageWatchlistsModal from '../../ui/ManageWatchlistsModal/ManageWatchlistsModal';
+import NewWatchlistModal from '../../ui/NewWatchlistModal/NewWatchlistModal';
 import { useWatchlists } from '../../../context/WatchlistContext';
 import { useWatchlistQuotes } from '../../../hooks/useWatchlistQuotes';
 import './WatchlistPanel.css';
@@ -52,7 +53,10 @@ function WatchlistPanel({ collapsed }) {
   const { quotes } = useWatchlistQuotes(activeWatchlist?.symbols ?? []);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  // Which list the manage dialog should land on — the one just created.
+  const [manageStartId, setManageStartId] = useState(null);
   const menuRef = useRef(null);
 
   const symbols = useMemo(() => activeWatchlist?.symbols ?? [], [activeWatchlist]);
@@ -75,10 +79,18 @@ function WatchlistPanel({ collapsed }) {
     navigate(`/symbol/${encodeURIComponent(sym)}`);
   }
 
-  function handleCreate() {
-    setMenuOpen(false);
-    const name = window.prompt('Name your watchlist');
-    if (name && name.trim()) createWatchlist(name);
+  // Creating from here drops you straight into the manage dialog on the new
+  // list, which is where you'd fill it.
+  function handleCreate(name) {
+    const id = createWatchlist(name);
+    setNewOpen(false);
+    setManageStartId(id);
+    setManageOpen(true);
+  }
+
+  function closeManage() {
+    setManageOpen(false);
+    setManageStartId(null);
   }
 
   return (
@@ -107,7 +119,10 @@ function WatchlistPanel({ collapsed }) {
                   {w.name}
                 </button>
               ))}
-              <button className="watchlist__menu-item watchlist__menu-item--new" onClick={handleCreate}>
+              <button
+                className="watchlist__menu-item watchlist__menu-item--new"
+                onClick={() => { setMenuOpen(false); setNewOpen(true); }}
+              >
                 <Plus size={14} /> New watchlist
               </button>
               <button
@@ -144,7 +159,13 @@ function WatchlistPanel({ collapsed }) {
         <MarketStatus />
       </div>
 
-      {manageOpen && <ManageWatchlistsModal onClose={() => setManageOpen(false)} />}
+      {newOpen && (
+        <NewWatchlistModal onCancel={() => setNewOpen(false)} onCreate={handleCreate} />
+      )}
+
+      {manageOpen && (
+        <ManageWatchlistsModal onClose={closeManage} initialSelectedId={manageStartId} />
+      )}
     </div>
   );
 }
