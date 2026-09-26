@@ -191,11 +191,11 @@
   opacity: 1;
 }
 
-.manage-wl__list-delete:hover:not([aria-disabled='true']) {
+.manage-wl__list-delete:hover:not(:disabled) {
   color: var(--color-neg);
 }
 
-.manage-wl__list-row:hover .manage-wl__list-delete[aria-disabled='true'] {
+.manage-wl__list-row:hover .manage-wl__list-delete:disabled {
   cursor: not-allowed;
   opacity: 0.35;
 }

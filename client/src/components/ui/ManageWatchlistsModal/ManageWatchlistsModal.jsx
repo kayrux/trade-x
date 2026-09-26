@@ -201,28 +201,22 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
                       {...renameProps()}
                     />
                   ) : (
-                    <Tooltip label="Double-click to rename">
-                      <button
-                        className="manage-wl__list-item"
-                        onClick={() => setSelectedId(w.id)}
-                        onDoubleClick={() => startRename(w, 'list')}
-                      >
-                        {w.name} ({w.symbols.length})
-                      </button>
-                    </Tooltip>
-                  )}
-                  <Tooltip label={onlyList ? 'Keep at least one watchlist' : 'Delete watchlist'}>
-                    {/* aria-disabled, not disabled: a disabled button fires no
-                        mouse events, so its tooltip would never show. */}
                     <button
-                      className="manage-wl__list-delete"
-                      onClick={() => !onlyList && setPendingDelete(w)}
-                      aria-disabled={onlyList}
-                      aria-label={`Delete ${w.name}`}
+                      className="manage-wl__list-item"
+                      onClick={() => setSelectedId(w.id)}
+                      onDoubleClick={() => startRename(w, 'list')}
                     >
-                      <Trash2 size={14} />
+                      {w.name} ({w.symbols.length})
                     </button>
-                  </Tooltip>
+                  )}
+                  <button
+                    className="manage-wl__list-delete"
+                    onClick={() => setPendingDelete(w)}
+                    disabled={onlyList}
+                    aria-label={`Delete ${w.name}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -244,15 +238,13 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
                   >
                     {selected?.name}
                   </h3>
-                  <Tooltip label="Rename watchlist">
-                    <button
-                      className="manage-wl__edit-btn"
-                      onClick={() => selected && startRename(selected, 'title')}
-                      aria-label="Rename watchlist"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                  </Tooltip>
+                  <button
+                    className="manage-wl__edit-btn"
+                    onClick={() => selected && startRename(selected, 'title')}
+                    aria-label="Rename watchlist"
+                  >
+                    <Pencil size={16} />
+                  </button>
                 </>
               )}
 
@@ -336,15 +328,13 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
                         <span className="manage-wl__row-market">
                           {quote?.exchange ? getMicName(quote.exchange) : '—'}
                         </span>
-                        <Tooltip label={`Remove ${sym}`}>
-                          <button
-                            className="manage-wl__row-remove"
-                            onClick={() => removeSymbol(selected.id, sym)}
-                            aria-label={`Remove ${sym}`}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </Tooltip>
+                        <button
+                          className="manage-wl__row-remove"
+                          onClick={() => removeSymbol(selected.id, sym)}
+                          aria-label={`Remove ${sym}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     );
                   })
