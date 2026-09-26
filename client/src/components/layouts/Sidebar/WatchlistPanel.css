@@ -205,9 +205,26 @@
 .watchlist__empty {
   color: var(--color-text-muted);
   font-size: 0.8125rem;
+  line-height: 1.5;
   text-align: center;
   padding: 20px 12px;
   margin: 0;
+}
+
+/* Reads as a link, not a button. */
+.watchlist__link {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-accent);
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.watchlist__link:hover {
+  text-decoration: underline;
 }
 
 .watchlist__footer {

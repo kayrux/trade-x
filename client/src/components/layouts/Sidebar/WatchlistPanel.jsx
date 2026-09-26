@@ -88,6 +88,12 @@ function WatchlistPanel({ collapsed }) {
     setManageOpen(true);
   }
 
+  function openManage() {
+    setMenuOpen(false);
+    setManageStartId(activeId);
+    setManageOpen(true);
+  }
+
   function closeManage() {
     setManageOpen(false);
     setManageStartId(null);
@@ -127,7 +133,7 @@ function WatchlistPanel({ collapsed }) {
               </button>
               <button
                 className="watchlist__menu-item watchlist__menu-item--action"
-                onClick={() => { setMenuOpen(false); setManageOpen(true); }}
+                onClick={openManage}
               >
                 <Settings size={14} /> Manage watchlists
               </button>
@@ -139,7 +145,10 @@ function WatchlistPanel({ collapsed }) {
       <div className="watchlist__list">
         {symbols.length === 0 ? (
           <p className="watchlist__empty">
-            No symbols yet. Search for one and add it from its page.
+            No symbols yet.{' '}
+            <button className="watchlist__link" onClick={openManage}>
+              Add symbols
+            </button>
           </p>
         ) : (
           symbols.map((sym) => (
