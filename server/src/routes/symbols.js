@@ -63,7 +63,7 @@ router.get("/batch", async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `SELECT s.symbol, s.name, q.last_price, q.prev_close, q.synced_at
+      `SELECT s.symbol, s.name, s.exchange, q.last_price, q.prev_close, q.synced_at
        FROM symbols s
        LEFT JOIN symbol_quotes q ON q.symbol_id = s.id
        WHERE s.symbol = ANY($1)

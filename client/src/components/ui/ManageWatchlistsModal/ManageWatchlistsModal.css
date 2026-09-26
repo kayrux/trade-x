@@ -1,0 +1,541 @@
+.manage-wl__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* Fixed box: nothing inside it may change the dialog's footprint. */
+.manage-wl {
+  position: relative; /* anchors the delete confirmation */
+  display: flex;
+  flex-direction: column;
+  width: 840px;
+  height: 560px;
+  max-width: 100%;
+  max-height: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+/* ---- Header ---- */
+.manage-wl__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.manage-wl__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.manage-wl__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  padding: 4px;
+  display: flex;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.manage-wl__close:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+/* ---- Two-column body ---- */
+.manage-wl__body {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+.manage-wl__lists {
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  flex-shrink: 0;
+  padding: 16px;
+  gap: 12px;
+  border-right: 1px solid var(--color-border);
+}
+
+.manage-wl__create {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.manage-wl__create:hover {
+  border-color: var(--color-accent);
+  background: var(--color-surface-hover);
+}
+
+.manage-wl__list-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.manage-wl__create-input,
+.manage-wl__rename-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text-primary);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.manage-wl__create-input {
+  flex-shrink: 0;
+  margin-bottom: 2px;
+}
+
+.manage-wl__create-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Rename in the detail header: matches the heading it replaces. */
+.manage-wl__title-input {
+  min-width: 0;
+  flex: 0 1 320px;
+  height: 34px;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text-primary);
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-family: inherit;
+  outline: none;
+}
+
+/* One row per list: the name button plus its delete control. */
+.manage-wl__list-row {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.manage-wl__list-row:hover {
+  background: var(--color-surface-hover);
+}
+
+.manage-wl__list-row--active {
+  background: var(--color-surface-active);
+}
+
+.manage-wl__list-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: 6px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  opacity: 0;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.manage-wl__list-row:hover .manage-wl__list-delete,
+.manage-wl__list-delete:focus-visible {
+  opacity: 1;
+}
+
+.manage-wl__list-delete:hover:not([aria-disabled='true']) {
+  color: var(--color-neg);
+}
+
+.manage-wl__list-row:hover .manage-wl__list-delete[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+/* Weight and padding are identical in every state — only colour changes, so
+   hovering can never reflow the column. */
+.manage-wl__list-item {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.manage-wl__list-row:hover .manage-wl__list-item,
+.manage-wl__list-row--active .manage-wl__list-item {
+  color: var(--color-text-primary);
+}
+
+/* ---- Right pane ---- */
+.manage-wl__detail {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 20px 0;
+}
+
+/* Title and edit toggle sit together on the left; the add slot is pushed to
+   the right so the search field has room to grow back toward them. */
+.manage-wl__detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.manage-wl__detail-title {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.manage-wl__edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.manage-wl__edit-btn:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}
+
+/* ---- Add symbol: button ⇄ search field, on the title's line ----
+   The slot is right-anchored, so widening it grows the field leftward out of
+   the button. It also anchors the shared search dropdown. */
+.manage-wl__add {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  transition: width 0.24s ease;
+}
+
+.manage-wl__add--open {
+  width: min(360px, 100%);
+}
+
+.manage-wl__add-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  z-index: 1;
+  transition: color 0.15s ease, border-color 0.15s ease, opacity 0.16s ease;
+}
+
+.manage-wl__add-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.manage-wl__add--open .manage-wl__add-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Sized to the slot, so the field widens with it. */
+.manage-wl__add-field {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.manage-wl__add--open .manage-wl__add-field {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.manage-wl__add-field .search-bar,
+.manage-wl__add-field .search-bar__input {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Symbol table ---- */
+.manage-wl__table {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-top: 12px;
+}
+
+/* Columns and row height are identical in every state — hover and edit mode
+   change colour only, never geometry. */
+.manage-wl__table-head,
+.manage-wl__row {
+  display: grid;
+  grid-template-columns: 24px 110px 1fr 90px 28px;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px;
+}
+
+.manage-wl__table-head {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.manage-wl__table-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.manage-wl__row {
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 0 transparent;
+  transition: background 0.15s ease;
+}
+
+.manage-wl__row:hover {
+  background: var(--color-surface-hover);
+}
+
+/* ---- Drag to reorder ---- */
+.manage-wl__row-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  cursor: grab;
+}
+
+.manage-wl__row:hover .manage-wl__row-grip {
+  opacity: 1;
+}
+
+.manage-wl__row--dragging {
+  opacity: 0.45;
+}
+
+/* An inset ring marks the drop target without shifting anything. */
+.manage-wl__row--drop {
+  background: var(--color-surface-hover);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.manage-wl__row-symbol {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.manage-wl__row-name,
+.manage-wl__row-market {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Always present — dimmed until the row is hovered, never changing geometry. */
+.manage-wl__row-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  padding: 4px;
+  opacity: 0.4;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.manage-wl__row:hover .manage-wl__row-remove,
+.manage-wl__row-remove:focus-visible {
+  opacity: 1;
+}
+
+.manage-wl__row-remove:hover {
+  color: var(--color-neg);
+}
+
+.manage-wl__empty {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 32px 16px;
+  margin: 0;
+}
+
+/* ---- Delete confirmation ---- */
+.manage-wl__confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.manage-wl__confirm {
+  width: 340px;
+  max-width: 100%;
+  padding: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+}
+
+.manage-wl__confirm-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.manage-wl__confirm-text {
+  margin: 0 0 18px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.manage-wl__confirm-text strong {
+  color: var(--color-text-primary);
+}
+
+.manage-wl__confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.manage-wl__confirm-btn {
+  border: 1px solid var(--color-border);
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.manage-wl__confirm-btn:hover {
+  background: var(--color-surface-hover);
+}
+
+.manage-wl__confirm-btn--danger {
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.manage-wl__confirm-btn--danger:hover {
+  background: var(--color-neg);
+  border-color: var(--color-neg);
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .manage-wl__body {
+    flex-direction: column;
+  }
+
+  .manage-wl__lists {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 180px;
+  }
+}

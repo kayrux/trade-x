@@ -1,11 +1,11 @@
-.dashboard {
+.symbol-page {
   width: 100%;
   display: flex;
   justify-content: center;
   padding: 1rem 2rem;
 }
 
-.dashboard__content {
+.symbol-page__content {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -13,7 +13,7 @@
   max-width: 1400px;
 }
 
-.dashboard__body {
+.symbol-page__body {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -22,12 +22,12 @@
 }
 
 @media (max-width: 900px) {
-  .dashboard__body {
+  .symbol-page__body {
     flex-direction: column;
   }
 }
 
-.dashboard__prompt {
+.symbol-page__prompt {
   color: var(--color-text-muted);
   font-size: 0.9rem;
   text-align: center;

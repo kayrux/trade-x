@@ -36,6 +36,7 @@ export function useWatchlistQuotes(symbols) {
           next[row.symbol.toUpperCase()] = {
             symbol: row.symbol,
             name: row.name,
+            exchange: row.exchange,
             last_price: price,
             change: hasChange ? price - prev : null,
             changePct: hasChange ? ((price - prev) / prev) * 100 : null,

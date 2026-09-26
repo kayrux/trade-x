@@ -1,4 +1,3 @@
-import { useQuote } from "../../../hooks/useQuote";
 import { getMicName } from "../../../lib/constants";
 import "./SymbolDetail.css";
 
@@ -64,9 +63,9 @@ function StatCell({ label, value, skeleton }) {
   );
 }
 
-function SymbolDetail({ symbol }) {
-  const { quote, loading, error } = useQuote(symbol);
-
+// The quote is fetched once by the page and passed down — fetching it here too
+// would double every symbol's polling traffic.
+function SymbolDetail({ symbol, quote, loading, error }) {
   if (loading && !quote) {
     return (
       <div className="symbol-detail symbol-detail--loading">

@@ -2,10 +2,6 @@ export const API_BASE_URL = 'http://localhost:4000';
 
 export const TABLE_PAGE_SIZE = 20;
 
-// Watchlist selector: how many watchlist pills to show before the last slot
-// collapses into a "More" overflow dropdown.
-export const MAX_VISIBLE_WATCHLISTS = 4;
-
 // Watchlist quote auto-refresh interval.
 export const WATCHLIST_POLL_INTERVAL_MS = 60 * 1000;
 

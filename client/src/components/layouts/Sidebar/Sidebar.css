@@ -6,15 +6,17 @@
   height: 100vh;
   position: sticky;
   top: 0;
+  z-index: 200;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
-  padding: 16px 12px;
+  padding: 16px 12px 0;
+  overflow: hidden;
   transition: width 0.16s ease;
 }
 
 .sidebar--collapsed {
   width: var(--sidebar-width-collapsed);
-  padding: 16px 8px;
+  padding: 16px 8px 0;
 }
 
 /* ---- Top: logo + collapse toggle ---- */
@@ -64,11 +66,15 @@
 }
 
 /* ---- Nav ---- */
+/* The nav keeps its natural height and stays at the top; the watchlist is
+   pinned to the bottom, with this margin guaranteeing a gap between them even
+   on short viewports. */
 .sidebar__nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
+  flex-shrink: 0;
+  margin-bottom: 28px;
 }
 
 .sidebar__section-label {
@@ -113,7 +119,15 @@
 
 .sidebar__item--active {
   color: var(--color-text-primary);
-  background: var(--color-accent-subtle);
+  background: var(--color-surface-active);
+}
+
+.sidebar__item--active:hover {
+  background: var(--color-surface-active);
+}
+
+.sidebar__item--active .sidebar__icon {
+  color: var(--color-accent);
 }
 
 .sidebar__icon {

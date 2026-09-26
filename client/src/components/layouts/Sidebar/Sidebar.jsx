@@ -1,13 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Star,
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { useLayout } from '../../../context/LayoutContext';
+import WatchlistPanel from './WatchlistPanel';
 import logoDark from '../../../assets/images/tradex-logo-dark.svg';
 import logoLight from '../../../assets/images/tradex-logo-light.svg';
 import iconDark from '../../../assets/images/tradex-icon-dark.svg';
@@ -45,14 +45,9 @@ function Sidebar() {
       <nav className="sidebar__nav">
         <span className="sidebar__section-label">Markets</span>
 
-        <NavLink to="/" end className={itemClass} data-tooltip="Dashboard">
+        <NavLink to="/" end className={itemClass} data-tooltip="Home">
           <LayoutDashboard size={20} className="sidebar__icon" />
-          <span className="sidebar__item-label">Dashboard</span>
-        </NavLink>
-
-        <NavLink to="/watchlist" className={itemClass} data-tooltip="Watchlist">
-          <Star size={20} className="sidebar__icon" />
-          <span className="sidebar__item-label">Watchlist</span>
+          <span className="sidebar__item-label">Home</span>
         </NavLink>
 
         <NavLink to="/picks" className={itemClass} data-tooltip="Picks">
@@ -60,6 +55,8 @@ function Sidebar() {
           <span className="sidebar__item-label">Picks</span>
         </NavLink>
       </nav>
+
+      <WatchlistPanel collapsed={sidebarCollapsed} />
     </aside>
   );
 }

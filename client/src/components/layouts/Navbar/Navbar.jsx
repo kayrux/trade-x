@@ -26,7 +26,7 @@ function Navbar() {
 
   function handleSelect(result) {
     addRecentSymbol(result);
-    navigate(`/dashboard?symbol=${result.symbol}`);
+    navigate(`/symbol/${encodeURIComponent(result.symbol)}`);
     setQuery('');
     setFocused(false);
     searchInputRef.current?.blur();

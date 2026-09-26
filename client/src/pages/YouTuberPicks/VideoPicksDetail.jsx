@@ -155,7 +155,7 @@ export default function VideoPicksDetail() {
                   <tr key={pick.symbol} className="picks-table__row">
                     <td className="picks-table__symbol">
                       <div className="picks-symbol">
-                        <Link className="picks-symbol__ticker" to={`/dashboard?symbol=${pick.symbol}`}>{pick.symbol}</Link>
+                        <Link className="picks-symbol__ticker" to={`/symbol/${encodeURIComponent(pick.symbol)}`}>{pick.symbol}</Link>
                         <span className="picks-symbol__name">{pick.company_name}</span>
                       </div>
                     </td>
