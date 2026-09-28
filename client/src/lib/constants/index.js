@@ -5,6 +5,10 @@ export const TABLE_PAGE_SIZE = 20;
 // Watchlist quote auto-refresh interval.
 export const WATCHLIST_POLL_INTERVAL_MS = 60 * 1000;
 
+// The list the star on a symbol page writes to. Created on first star if the
+// account doesn't have it yet.
+export const DEFAULT_WATCHLIST_NAME = 'All';
+
 export const MIC_NAMES = {
   XNAS: 'NASDAQ',
   XNYS: 'NYSE',

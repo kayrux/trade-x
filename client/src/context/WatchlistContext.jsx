@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   fetchWatchlists,
   createWatchlist as createRequest,
@@ -10,6 +10,7 @@ import {
 } from '../lib/api/watchlists';
 import { useAuth } from './AuthContext';
 import { useSnackbar } from './SnackbarContext';
+import { DEFAULT_WATCHLIST_NAME } from '../lib/constants';
 
 // Watchlists live on the server, one set per account. Only the pointer to the
 // list the sidebar is showing is local — that's a per-device UI preference, not
@@ -22,6 +23,10 @@ const ACTIVE_KEY = 'trade-x-active-watchlist';
 const LEGACY_KEY = 'trade-x-watchlists';
 
 const WatchlistContext = createContext(null);
+
+function isDefaultList(list) {
+  return list.name.trim().toLowerCase() === DEFAULT_WATCHLIST_NAME.toLowerCase();
+}
 
 function loadActiveId() {
   try {
@@ -98,6 +103,22 @@ export function WatchlistProvider({ children }) {
     };
   }, [user, authLoading, reportError]);
 
+  // The default list is the superset: everything on any watchlist is also on
+  // it. Its id is mirrored into a ref so a mutation can resolve it without
+  // waiting for the render that follows the state update — two adds in one tick
+  // would otherwise each decide the list was missing and try to create it.
+  const defaultList = watchlists.find(isDefaultList);
+  const defaultIdRef = useRef(null);
+  // Pinned to the top wherever lists are listed. The sort is stable, so the
+  // rest keep the order the server sent.
+  const orderedWatchlists = [...watchlists].sort(
+    (a, b) => Number(isDefaultList(b)) - Number(isDefaultList(a)),
+  );
+  useEffect(() => {
+    // Recomputed from state, so renaming or deleting the list clears the ref.
+    defaultIdRef.current = watchlists.find(isDefaultList)?.id ?? null;
+  }, [watchlists]);
+
   const setActive = useCallback((id) => {
     setActiveIdState(id);
     storeActiveId(id);
@@ -155,34 +176,85 @@ export function WatchlistProvider({ children }) {
     [watchlists, activeIdState, setActive, reportError],
   );
 
-  const addSymbol = useCallback(
-    async (id, symbol) => {
-      const sym = String(symbol || '').toUpperCase().trim();
-      if (!sym) return;
+  // Created on demand rather than at sign-up, and without activating it — the
+  // sidebar shouldn't jump lists because a symbol was starred somewhere.
+  const ensureDefaultList = useCallback(async () => {
+    if (defaultIdRef.current) return defaultIdRef.current;
+    const id = await createWatchlist(DEFAULT_WATCHLIST_NAME, { activate: false });
+    defaultIdRef.current = id;
+    return id;
+  }, [createWatchlist]);
+
+  const addOne = useCallback(
+    async (id, sym) => {
       try {
         replaceList(await addWatchlistSymbol(id, sym));
+        return true;
       } catch (err) {
         reportError(err, 'Could not add symbol');
+        return false;
       }
     },
     [replaceList, reportError],
   );
 
+  // Adding anywhere also adds to the default list, so it stays the superset no
+  // matter which surface did the adding. Returns whether it all went through.
+  const addSymbol = useCallback(
+    async (id, symbol) => {
+      const sym = String(symbol || '').toUpperCase().trim();
+      if (!sym) return false;
+      if (!(await addOne(id, sym))) return false;
+
+      if (id === defaultIdRef.current) return true;
+      const allId = await ensureDefaultList();
+      if (!allId || allId === id) return Boolean(allId);
+      return addOne(allId, sym);
+    },
+    [addOne, ensureDefaultList],
+  );
+
+  const addToDefault = useCallback(
+    async (symbol) => {
+      const sym = String(symbol || '').toUpperCase().trim();
+      if (!sym) return false;
+      const allId = await ensureDefaultList();
+      if (!allId) return false;
+      return addOne(allId, sym);
+    },
+    [addOne, ensureDefaultList],
+  );
+
+  // Removing from the default list untracks the symbol outright: it's the
+  // superset, so copies left behind in other lists would contradict it. Any
+  // other list drops just its own copy.
   const removeSymbol = useCallback(
     async (id, symbol) => {
-      // The DELETE answers 204, so the row is dropped locally rather than
-      // spending a second request to re-read the list.
+      const targets =
+        id === defaultIdRef.current
+          ? watchlists.filter((w) => w.symbols.includes(symbol)).map((w) => w.id)
+          : [id];
+      if (targets.length === 0) return true;
+
+      // The DELETE answers 204, so rows are dropped locally rather than
+      // spending a second request to re-read each list.
       const previous = watchlists;
-      setWatchlists((prev) =>
-        prev.map((w) =>
-          w.id === id ? { ...w, symbols: w.symbols.filter((s) => s !== symbol) } : w,
-        ),
-      );
+      const strip = (w) => ({ ...w, symbols: w.symbols.filter((s) => s !== symbol) });
+      setWatchlists((prev) => prev.map((w) => (targets.includes(w.id) ? strip(w) : w)));
+
+      const done = new Set();
       try {
-        await removeWatchlistSymbol(id, symbol);
+        for (const target of targets) {
+          await removeWatchlistSymbol(target, symbol);
+          done.add(target);
+        }
+        return true;
       } catch (err) {
-        setWatchlists(previous);
+        // Only the lists that never got there are put back — the ones the
+        // server already dropped are gone whatever the UI shows.
+        setWatchlists(previous.map((w) => (done.has(w.id) ? strip(w) : w)));
         reportError(err, 'Could not remove symbol');
+        return false;
       }
     },
     [watchlists, reportError],
@@ -230,15 +302,20 @@ export function WatchlistProvider({ children }) {
     [watchlists],
   );
 
+  // With nothing selected the panel lands on the top list, which is the default
+  // one — the broadest view is the sensible thing to open on.
   const activeWatchlist =
-    watchlists.find((w) => w.id === activeIdState) ?? watchlists[0];
+    watchlists.find((w) => w.id === activeIdState) ?? orderedWatchlists[0];
 
   return (
     <WatchlistContext.Provider
       value={{
-        watchlists,
+        watchlists: orderedWatchlists,
         activeWatchlist,
         activeId: activeWatchlist?.id,
+        // Undefined until the account has starred something — the list is
+        // created on first use, not at sign-up.
+        defaultWatchlist: defaultList,
         // Panels need all three to tell "still loading" from "signed out" from
         // "signed in with no lists yet".
         loading: loading || authLoading,
@@ -249,6 +326,7 @@ export function WatchlistProvider({ children }) {
         renameWatchlist,
         deleteWatchlist,
         addSymbol,
+        addToDefault,
         removeSymbol,
         reorderSymbols,
       }}

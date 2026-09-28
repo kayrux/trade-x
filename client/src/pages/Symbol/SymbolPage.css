@@ -13,6 +13,15 @@
   max-width: 1400px;
 }
 
+/* The star sits opposite the heading block, top-aligned with the ticker. */
+.symbol-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
 .symbol-page__body {
   display: flex;
   flex-direction: row;
