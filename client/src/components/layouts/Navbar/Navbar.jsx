@@ -3,19 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { User, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
-import logoDark from '../../../assets/images/tradex-logo-dark.svg';
-import logoLight from '../../../assets/images/tradex-logo-light.svg';
-import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
 import { useRecentSymbols } from '../../../hooks/useRecentSymbols';
+import { useSymbolSearch } from '../../../hooks/useSymbolSearch';
 import SearchBar from '../../forms/SearchBar/SearchBar';
 import SymbolSearchResults from '../../ui/SymbolSearchResults/SymbolSearchResults';
 import Avatar from '../../ui/Avatar/Avatar';
 import './Navbar.css';
 
 function Navbar() {
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -28,7 +26,7 @@ function Navbar() {
 
   function handleSelect(result) {
     addRecentSymbol(result);
-    navigate(`/dashboard?symbol=${result.symbol}`);
+    navigate(`/symbol/${encodeURIComponent(result.symbol)}`);
     setQuery('');
     setFocused(false);
     searchInputRef.current?.blur();
@@ -47,43 +45,35 @@ function Navbar() {
 
   return (
     <nav className="navbar">
-      <div className="navbar__left">
-        <button className="navbar__logo-btn" aria-label="Home" onClick={() => navigate('/')}>
-          <img
-            src={theme === 'dark' ? logoDark : logoLight}
-            alt="Trade X"
-            className="navbar__logo"
-          />
-        </button>
+      <div className="navbar__search-wrapper">
+        <SearchBar
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          onClear={() => setQuery('')}
+          inputRef={searchInputRef}
+        />
+        <SymbolSearchResults
+          results={hasQuery ? results : recents}
+          loading={hasQuery ? loading : false}
+          error={hasQuery ? error : null}
+          isRecent={!hasQuery}
+          visible={showDropdown}
+          onSelect={handleSelect}
+          onClearRecents={clearRecentSymbols}
+        />
       </div>
-      <div className="navbar__center">
-        <div className="navbar__search-wrapper">
-          <SearchBar
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setTimeout(() => setFocused(false), 150)}
-            onClear={() => setQuery('')}
-            inputRef={searchInputRef}
-          />
-          <SymbolSearchResults
-            results={hasQuery ? results : recents}
-            loading={hasQuery ? loading : false}
-            error={hasQuery ? error : null}
-            isRecent={!hasQuery}
-            visible={showDropdown}
-            onSelect={handleSelect}
-            onClearRecents={clearRecentSymbols}
-          />
-        </div>
-      </div>
+
       <div className="navbar__right">
-        <button className="navbar__nav-link" onClick={() => navigate('/picks')}>
-          Picks
-        </button>
-        <button className="navbar__icon-btn" aria-label="Toggle theme" onClick={toggleTheme}>
+        <button
+          className="navbar__icon-btn"
+          aria-label="Toggle theme"
+          onClick={toggleTheme}
+        >
           {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
         </button>
+
         <div className="navbar__account">
           <button
             className="navbar__icon-btn"

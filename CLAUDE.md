@@ -104,8 +104,15 @@ src/
 
 Full DDL lives in `PLAN.md`. Two points that aren't obvious from the schema:
 
-- `symbols` syncs daily; `symbol_quotes` refreshes every few minutes. Separate tables for the
+- `symbols` syncs daily; `symbol_quotes` refreshes far more often. Separate tables for the
   differing cadence, avoiding sparse NULLs.
+- **Two things write `symbol_quotes`**, and only these: `GET /symbols/:symbol`, which refreshes
+  live when the row is older than 30s, and the `syncQuotes` cron. Everything else, including
+  `GET /symbols/batch`, reads whatever is stored. A symbol that neither path covers keeps a stale
+  price *and* a stale `prev_close`, which makes its % change wrong, not just old.
+- `syncQuotes` (`*/2 * * * 1-5`) covers **only symbols on a watchlist** — the full 31k table can't
+  fit in Finnhub's 60 calls/min. It no-ops outside the US session and skips rows refreshed in the
+  last 90s, so most ticks cost nothing.
 - **Weekly and monthly candles are VIEWS**, derived from daily rows. Only `daily` is stored —
   never insert weekly/monthly rows.
 
@@ -149,7 +156,7 @@ portfolios; Phase 6 is trade tracking. See `PLAN.md`. Complete each phase before
 
 | Source | Limits & notes |
 | ------ | -------------- |
-| Finnhub | 60 calls/min. Symbol list daily, quotes every few minutes. Schema at `finnhub-schema.json` |
+| Finnhub | 60 calls/min. Symbol list daily; quotes every 2 min for watchlisted symbols during market hours, capped at 40 per run. Schema at `finnhub-schema.json` |
 | Alpha Vantage | **25 requests/day** — startup sync is freshness-guarded. Schema at `alphavantage-schema.json`. Commodities namespaced `AV:*` to avoid colliding with real tickers (WTI, GOLD are live NYSE symbols) |
 | yfinance | Via the Python service. No key, no hard limit |
 | YouTube Data API | Quota-limited — the admin gate exists partly to protect it |

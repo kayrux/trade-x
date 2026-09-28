@@ -1,0 +1,147 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  padding: 16px 12px 0;
+  overflow: hidden;
+  transition: width 0.16s ease;
+}
+
+.sidebar--collapsed {
+  width: var(--sidebar-width-collapsed);
+  padding: 16px 8px 0;
+}
+
+/* ---- Top: logo + collapse toggle ---- */
+.sidebar__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 36px;
+  margin-bottom: 20px;
+}
+
+.sidebar--collapsed .sidebar__top {
+  flex-direction: column;
+  height: auto;
+  gap: 12px;
+}
+
+.sidebar__logo-link {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.sidebar__logo {
+  height: 28px;
+  width: auto;
+  display: block;
+}
+
+.sidebar__collapse-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sidebar__collapse-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+/* ---- Nav ---- */
+/* The nav keeps its natural height and stays at the top; the watchlist is
+   pinned to the bottom, with this margin guaranteeing a gap between them even
+   on short viewports. */
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-bottom: 28px;
+}
+
+.sidebar__section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 0 8px;
+  margin: 8px 0 6px;
+}
+
+.sidebar--collapsed .sidebar__section-label {
+  opacity: 0;
+  height: 0;
+  margin: 4px 0;
+  overflow: hidden;
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sidebar__item:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+.sidebar__item--active {
+  color: var(--color-text-primary);
+  background: var(--color-surface-active);
+}
+
+.sidebar__item--active:hover {
+  background: var(--color-surface-active);
+}
+
+.sidebar__item--active .sidebar__icon {
+  color: var(--color-accent);
+}
+
+.sidebar__icon {
+  flex-shrink: 0;
+}
+
+.sidebar--collapsed .sidebar__item {
+  justify-content: center;
+  padding: 10px;
+}
+
+.sidebar--collapsed .sidebar__item-label {
+  display: none;
+}
+
+/* Tooltips come from the portal-rendered <Tooltip> component — an in-flow
+   ::after would be clipped by this column's overflow. */

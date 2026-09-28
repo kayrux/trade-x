@@ -128,7 +128,7 @@ function Home() {
   const marketFresh = formatSynced(markets.find((q) => q.synced_at)?.synced_at);
   const commodityFresh = formatSynced(commodities.find((q) => q.synced_at)?.synced_at);
   const cardClick = (q) =>
-    q.chartable ? () => navigate(`/dashboard?symbol=${encodeURIComponent(q.symbol)}`) : undefined;
+    q.chartable ? () => navigate(`/symbol/${encodeURIComponent(q.symbol)}`) : undefined;
 
   return (
     <PageLayout>

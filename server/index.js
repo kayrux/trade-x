@@ -5,12 +5,14 @@ const cron = require('node-cron');
 const syncSymbols = require('./src/jobs/syncSymbols');
 const syncCommodities = require('./src/jobs/syncCommodities');
 const { syncAllChannels } = require('./src/jobs/syncVideos');
+const syncQuotes = require('./src/jobs/syncQuotes');
 const symbolsRouter = require('./src/routes/symbols');
 const candlesRouter = require('./src/routes/candles');
 const newsRouter = require('./src/routes/news');
 const channelsRouter = require('./src/routes/channels');
 const picksRouter = require('./src/routes/picks');
 const authRouter = require('./src/routes/auth');
+const watchlistsRouter = require('./src/routes/watchlists');
 const { attachUser } = require('./src/middleware/auth');
 
 const app = express();
@@ -29,6 +31,7 @@ app.use('/candles', candlesRouter);
 app.use('/news', newsRouter);
 app.use('/channels', channelsRouter);
 app.use('/picks', picksRouter);
+app.use('/watchlists', watchlistsRouter);
 
 // Sync symbols once at startup, then daily at midnight
 syncSymbols();
@@ -42,5 +45,13 @@ cron.schedule('0 0 * * *', () => syncCommodities(true));
 
 // Check tracked channels for new videos every hour
 cron.schedule('0 * * * *', syncAllChannels);
+
+// Keep quotes warm for watchlisted symbols. Without this, symbol_quotes is only
+// written when someone opens a symbol's page, so sidebar prices go stale (and
+// their % change turns wrong, since prev_close staled with them). The job is a
+// no-op outside the US session and skips symbols refreshed in the last 90s, so
+// most ticks cost nothing.
+syncQuotes();
+cron.schedule('*/2 * * * 1-5', syncQuotes);
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

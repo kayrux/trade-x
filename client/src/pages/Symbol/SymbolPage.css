@@ -1,0 +1,43 @@
+.symbol-page {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 1rem 2rem;
+}
+
+.symbol-page__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 1400px;
+}
+
+/* The star lives inside the heading's ticker row now, so this just holds it. */
+.symbol-page__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+.symbol-page__body {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .symbol-page__body {
+    flex-direction: column;
+  }
+}
+
+.symbol-page__prompt {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 80px;
+}

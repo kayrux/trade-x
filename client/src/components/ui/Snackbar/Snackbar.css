@@ -3,10 +3,14 @@
 .snackbar-host {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  /* Centred on the viewport: the translate is what does the centring, so any
+     override of `left` has to clear it too (see the narrow-screen rule). */
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 300; /* above .navbar (100) and .navbar__menu / .symbol-results (200) */
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
   max-width: min(380px, calc(100vw - 32px));
   pointer-events: none;
@@ -27,20 +31,26 @@
   animation: snackbar-in 180ms ease-out;
 }
 
+/* The variant colours are translucent tints meant to sit on a solid surface.
+   The snackbar floats over page content, so layer each tint over the opaque
+   navbar background — a hint of transparency without the page bleeding through. */
 .snackbar--success {
-  background: var(--color-success-bg);
+  background: linear-gradient(var(--color-success-bg), var(--color-success-bg)),
+    var(--color-navbar-bg);
   border-color: var(--color-success-border);
   color: var(--color-success);
 }
 
 .snackbar--error {
-  background: var(--color-error-bg);
+  background: linear-gradient(var(--color-error-bg), var(--color-error-bg)),
+    var(--color-navbar-bg);
   border-color: var(--color-error-border);
   color: var(--color-error);
 }
 
 .snackbar--info {
-  background: var(--color-info-bg);
+  background: linear-gradient(var(--color-info-bg), var(--color-info-bg)),
+    var(--color-navbar-bg);
   border-color: var(--color-info-border);
   color: var(--color-info);
 }
@@ -103,6 +113,7 @@
     left: 16px;
     right: 16px;
     bottom: 16px;
+    transform: none; /* full-width here, so no centring offset */
     max-width: none;
   }
 }

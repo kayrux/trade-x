@@ -1,0 +1,273 @@
+/* The watchlist is pinned to the bottom of the sidenav (margin-top: auto),
+   capped in height, and is the only scrolling region in the column. Every
+   `.sidebar--collapsed` rule here is its rail form. */
+.watchlist {
+  display: flex;
+  flex-direction: column;
+  margin: auto -12px 0;
+  max-height: 55vh;
+  min-height: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.sidebar--collapsed .watchlist {
+  margin: auto -8px 0;
+}
+
+.watchlist__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 10px 12px 8px;
+  flex-shrink: 0;
+}
+
+.sidebar--collapsed .watchlist__header {
+  display: none;
+}
+
+.watchlist__title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  padding-left: 4px;
+  flex-shrink: 0;
+}
+
+/* ---- List dropdown, right of the permanent title ---- */
+.watchlist__selector {
+  position: relative;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.watchlist__selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 5px 8px;
+  border-radius: 7px;
+  transition: background 0.15s ease;
+}
+
+.watchlist__selector-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+.watchlist__selector-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Opens upward — the panel sits at the bottom of the sidebar, which clips
+   its own overflow. */
+.watchlist__menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  min-width: 170px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.watchlist__menu-item {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.watchlist__menu-item:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+.watchlist__menu-item--active {
+  color: var(--color-text-primary);
+  background: var(--color-surface-active);
+}
+
+/* Actions sit below the lists, behind a divider. */
+.watchlist__menu-item--new,
+.watchlist__menu-item--action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.watchlist__menu-item--new {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+}
+
+/* ---- Symbol list ---- */
+.watchlist__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+}
+
+.watchlist__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.watchlist__row:hover {
+  background: var(--color-surface-hover);
+}
+
+.watchlist__row--active {
+  background: var(--color-surface-active);
+}
+
+.watchlist__row-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.watchlist__symbol {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.watchlist__name {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.watchlist__row-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.watchlist__price {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.watchlist__change {
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.watchlist__change--pos { color: var(--color-pos); }
+.watchlist__change--neg { color: var(--color-neg); }
+.watchlist__change--neutral { color: var(--color-text-muted); }
+
+.watchlist__empty {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-align: center;
+  padding: 20px 12px;
+  margin: 0;
+}
+
+/* Reads as a link, not a button. */
+.watchlist__link {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-accent);
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.watchlist__link:hover {
+  text-decoration: underline;
+}
+
+.watchlist__footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ---- Collapsed rail: symbol over its change %, nothing else ---- */
+.sidebar--collapsed .watchlist__list {
+  padding: 8px 6px;
+}
+
+.sidebar--collapsed .watchlist__row {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+}
+
+.sidebar--collapsed .watchlist__name,
+.sidebar--collapsed .watchlist__price,
+.sidebar--collapsed .watchlist__empty,
+.sidebar--collapsed .watchlist__footer {
+  display: none;
+}
+
+.sidebar--collapsed .watchlist__row-left,
+.sidebar--collapsed .watchlist__row-right {
+  align-items: center;
+  text-align: center;
+  max-width: 100%;
+}
+
+.sidebar--collapsed .watchlist__symbol {
+  display: block;
+  font-size: 0.75rem;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar--collapsed .watchlist__change {
+  font-size: 0.6875rem;
+}

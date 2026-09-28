@@ -1,13 +1,30 @@
 :root {
+  /* Paints native UI — scrollbars, form controls — to match the theme. */
+  color-scheme: dark;
+
   --color-bg-dark: #0f1117;
   --color-navbar-bg: #13171f;
   --color-navbar-border: #1e2430;
   --color-accent: #0ea5e9;
   --color-accent-subtle: rgba(14, 165, 233, 0.28);
   --color-text-primary: #e2e8f0;
-  --color-text-muted: #64748b;
+  --color-text-muted: #959da9;
   --color-input-bg: #1e2430;
   --navbar-height: 60px;
+
+  /* Sidebar / watchlist chrome */
+  --color-surface: #13171f;
+  --color-surface-hover: #1b212c;
+  --color-surface-active: #232b39;
+  --color-border: #1e2430;
+  --color-pos: #22c55e;
+  --color-neg: #ef4444;
+  --color-scrollbar-thumb: #2a3342;
+  --color-scrollbar-thumb-hover: #3a465a;
+  /* Wide enough for a watchlist row: ticker + name on the left, price and
+     change on the right. */
+  --sidebar-width: 17rem;
+  --sidebar-width-collapsed: 4.5rem;
 
   /* Semantic message colors. The tinted-bg / 0.4-alpha-border / solid-text
      triple is the house recipe for a message surface (cf. .auth__error). */
@@ -23,6 +40,8 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
+
   --color-bg-dark: #f8fafc;
   --color-navbar-bg: #ffffff;
   --color-navbar-border: #e2e8f0;
@@ -31,6 +50,15 @@
   --color-input-bg: #f1f5f9;
   --color-accent: #0ea5e9;
   --color-accent-subtle: rgba(14, 165, 233, 0.38);
+
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-surface-active: #ecf0f5;
+  --color-border: #e2e8f0;
+  --color-pos: #16a34a;
+  --color-neg: #dc2626;
+  --color-scrollbar-thumb: #cbd5e1;
+  --color-scrollbar-thumb-hover: #94a3b8;
 
   /* Only the text colors need darkening — the tints and borders above read
      correctly on a light surface, so they inherit. */

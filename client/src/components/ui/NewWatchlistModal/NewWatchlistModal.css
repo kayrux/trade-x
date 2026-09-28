@@ -1,0 +1,115 @@
+.new-wl__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.new-wl {
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-width: 100%;
+  padding: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.new-wl__title {
+  margin: 0 0 16px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.new-wl__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.new-wl__input {
+  width: 100%;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.new-wl__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.new-wl__input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-subtle);
+}
+
+/* A name already in use: the field flags it and Create stays disabled, so the
+   request is never sent. */
+.new-wl__input[aria-invalid='true'],
+.new-wl__input[aria-invalid='true']:focus {
+  border-color: var(--color-error);
+  box-shadow: none;
+}
+
+.new-wl__error {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--color-error);
+}
+
+.new-wl__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.new-wl__btn {
+  border: 1px solid var(--color-border);
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.new-wl__btn:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+}
+
+.new-wl__btn--primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.new-wl__btn--primary:hover:not(:disabled) {
+  background: var(--color-accent);
+  filter: brightness(1.08);
+}
+
+.new-wl__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

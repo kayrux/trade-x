@@ -29,7 +29,9 @@ export class AuthError extends Error {
   }
 }
 
-async function throwFromResponse(res, fallback) {
+// Exported so other authed resources (watchlists) surface the server's `error`
+// field and raise AuthError on 401/403 the same way this module does.
+export async function throwFromResponse(res, fallback) {
   const body = await res.json().catch(() => ({}));
   const message = body.error || `${fallback}: ${res.status}`;
   if (res.status === 401 || res.status === 403) {
