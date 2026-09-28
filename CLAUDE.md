@@ -50,19 +50,21 @@ Finnhub          Python service        Alpha Vantage      YouTube API + Gemini
  symbols, news)   transcripts)
     ↓                  ↓                     ↓                   ↓
 Node/Express (server/)
-    ├── /auth      — register / login / me
-    ├── /symbols   — prefix search + quotes
-    ├── /candles   — historical OHLCV
-    ├── /news      — company + market news
-    ├── /picks     — YouTuber picks + performance
-    └── /channels  — pipeline control (mutations are admin-only)
+    ├── /auth        — register / login / me
+    ├── /symbols     — prefix search + quotes
+    ├── /candles     — historical OHLCV
+    ├── /news        — company + market news
+    ├── /picks       — YouTuber picks + performance
+    ├── /channels    — pipeline control (mutations are admin-only)
+    └── /watchlists  — per-user lists (every route requires auth)
     ↓
 PostgreSQL
     ├── symbols, symbol_quotes
     ├── symbol_candles, symbol_candle_meta, candle_coverage
     │   (+ symbol_candles_weekly / _monthly VIEWS)
     ├── tracked_channels, videos, picks
-    └── users
+    ├── users
+    └── watchlists, watchlist_symbols
     ↓
 React (client/)
 ```
@@ -76,7 +78,7 @@ This is **Create React App**, not Vite — the entry points are `src/index.js` a
 src/
 ├── pages/              # One folder per route/view, with a co-located .css
 │   ├── Home/
-│   ├── Dashboard/      # Symbol lookup, quote, chart, news
+│   ├── Symbol/         # SymbolPage.jsx — /symbol/:ticker. Quote, chart, news
 │   ├── YouTuberPicks/  # Picks table, video detail, sync history
 │   ├── Auth/           # Login.jsx, Register.jsx, shared Auth.css
 │   └── Account/
@@ -84,21 +86,26 @@ src/
 │   ├── RequireAuth.jsx # Route guard
 │   ├── ui/             # CandleChart, SymbolDetail, TablePagination, …
 │   ├── forms/          # SearchBar
-│   └── layouts/        # PageLayout, Navbar
+│   └── layouts/        # PageLayout, Navbar, Sidebar (+ WatchlistPanel)
 ├── hooks/              # useSymbolSearch, useQuote, useCandles, usePicks, …
 ├── lib/
 │   ├── api/            # One file per backend resource; plain fetch, no client lib
-│   └── constants/      # API_BASE_URL, TABLE_PAGE_SIZE, MIC name/currency maps
-├── context/            # ThemeContext, AuthContext
+│   ├── constants/      # API_BASE_URL, TABLE_PAGE_SIZE, MIC name/currency maps
+│   └── utils/          # marketHours.js only — not a grab-bag; think before adding
+├── context/            # Theme, Auth, Watchlist, Snackbar, Layout
 └── styles/             # variables.css — CSS custom properties, light + dark
 ```
+
+There is no `/watchlists` page — watchlists live in the Sidebar's `WatchlistPanel`, with
+create/rename/delete/reorder in `ui/ManageWatchlistsModal` and add/remove via `ui/WatchlistStar`.
+`/dashboard` is a legacy redirect, not a view.
 
 **Conventions:**
 - Styling is plain CSS with BEM-ish class names and a co-located `.css` per component. Use
   the custom properties in `styles/variables.css` (`--color-bg-dark`, `--color-accent`,
   `--color-text-muted`, …) — never hardcode colors, or light mode breaks.
 - API modules use bare `fetch`, throw on `!res.ok`, and surface the server's `error` field.
-- There is no `utils/` or `types/` directory. This is JavaScript, not TypeScript.
+- There is no `types/` directory. This is JavaScript, not TypeScript.
 
 ## Database
 
@@ -115,6 +122,10 @@ Full DDL lives in `PLAN.md`. Two points that aren't obvious from the schema:
   last 90s, so most ticks cost nothing.
 - **Weekly and monthly candles are VIEWS**, derived from daily rows. Only `daily` is stored —
   never insert weekly/monthly rows.
+- **`symbols.id` is a FIGI, not the ticker**, and ~28 tickers (TEVA, ARB, …) appear on two rows
+  with different ids. Any ticker → id lookup needs `DISTINCT ON (symbol) … ORDER BY symbol, id`
+  so the same ticker always resolves to the same row — see `resolveSymbolIds` in
+  `routes/watchlists.js`. Without it, one ticker can land on a watchlist twice under two ids.
 
 Symbol lookup is a B-tree prefix query — no fuzzy search, no Redis:
 
@@ -129,7 +140,8 @@ WHERE s.symbol LIKE 'AAP%';
 
 `server/migrations/*.sql`, applied **by hand** (`psql $DATABASE_URL -f <file>`) — there is no
 runner. Number each new file with the next unused prefix; `002` was accidentally used twice,
-so check before naming. Write statements to be re-runnable (`IF NOT EXISTS`, `ON CONFLICT`).
+so check before naming. The latest is `006_watchlists.sql`, so the next is `007`. Write
+statements to be re-runnable (`IF NOT EXISTS`, `ON CONFLICT`).
 
 ## Auth
 
@@ -146,11 +158,27 @@ server throws at startup without it.
 - Client: `useAuth()` from `context/AuthContext`. Admin-only controls render behind `isAdmin`,
   which is cosmetic — the server check is the real boundary. Calls to admin-gated routes must
   use `authFetch` from `lib/api/auth.js`, not bare `fetch`.
+- **`/watchlists` is the one resource where reads are not public.** Every route is
+  `requireAuth` and scoped to the caller: a list that doesn't exist and one owned by someone
+  else both answer `404`, so ids can't be probed. A non-UUID `:id` is screened out and
+  treated as not-found rather than reaching Postgres and surfacing as a 500. Keep that shape
+  — go through `findOwned()` in `routes/watchlists.js` for any new `:id` route.
 
 ## Development Phases
 
-Phases 1–4 (core, charts, YouTuber Picks, accounts) are complete. Phase 5 is watchlists and
-portfolios; Phase 6 is trade tracking. See `PLAN.md`. Complete each phase before the next.
+Phases 1–4 (core, charts, YouTuber Picks, accounts) are complete. Phase 6 is trade tracking.
+See `PLAN.md`. Complete each phase before the next.
+
+**Phase 5 is partially done.** Of its three parts:
+
+- Watchlists — **done**, end to end (`006_watchlists.sql`, `/watchlists`, sidebar + modal).
+- Portfolio holdings — **not started**. The `portfolio_holdings` DDL is drafted in `PLAN.md`
+  but no migration applies it and there is no route, API module, or page.
+- Public share links — **not started**. `watchlists.is_public` exists and is returned by the
+  API, but nothing sets it: `PATCH /watchlists/:id` accepts only `name`, and there is no
+  unauthenticated read route. Sharing by raw watchlist UUID would make the id its own secret,
+  which cuts against the deliberate 404 rule documented under Auth — decide on a separate
+  share token before building it.
 
 ## External APIs
 
