@@ -50,6 +50,7 @@ function WatchlistPanel({ collapsed }) {
 
   const {
     watchlists, activeWatchlist, activeId, setActive, createWatchlist,
+    loading, signedIn,
   } = useWatchlists();
   const { quotes } = useWatchlistQuotes(activeWatchlist?.symbols ?? []);
 
@@ -81,10 +82,12 @@ function WatchlistPanel({ collapsed }) {
   }
 
   // Creating from here drops you straight into the manage dialog on the new
-  // list, which is where you'd fill it.
-  function handleCreate(name) {
-    const id = createWatchlist(name);
+  // list, which is where you'd fill it. A failed create keeps the dialog shut —
+  // the context has already surfaced why.
+  async function handleCreate(name) {
+    const id = await createWatchlist(name);
     setNewOpen(false);
+    if (!id) return;
     setManageStartId(id);
     setManageOpen(true);
   }
@@ -105,7 +108,13 @@ function WatchlistPanel({ collapsed }) {
       <div className="watchlist__header">
         <span className="watchlist__title">Watchlist</span>
 
-        <div className="watchlist__selector" ref={menuRef}>
+        {/* Nothing to switch between until you're signed in and own a list.
+            With none, the panel body carries the create prompt instead. */}
+        <div
+          className="watchlist__selector"
+          ref={menuRef}
+          hidden={!signedIn || watchlists.length === 0}
+        >
           <Tooltip label="Switch watchlist">
             <button
               className="watchlist__selector-btn"
@@ -146,7 +155,23 @@ function WatchlistPanel({ collapsed }) {
       </div>
 
       <div className="watchlist__list">
-        {symbols.length === 0 ? (
+        {loading ? (
+          <p className="watchlist__empty">Loading…</p>
+        ) : !signedIn ? (
+          <p className="watchlist__empty">
+            <button className="watchlist__link" onClick={() => navigate('/login')}>
+              Sign in
+            </button>{' '}
+            to keep watchlists on your account.
+          </p>
+        ) : watchlists.length === 0 ? (
+          <p className="watchlist__empty">
+            No watchlists yet.{' '}
+            <button className="watchlist__link" onClick={() => setNewOpen(true)}>
+              Create one
+            </button>
+          </p>
+        ) : symbols.length === 0 ? (
           <p className="watchlist__empty">
             No symbols yet.{' '}
             <button className="watchlist__link" onClick={openManage}>

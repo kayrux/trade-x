@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useWatchlists } from '../../../context/WatchlistContext';
 import './NewWatchlistModal.css';
 
 // Name prompt for a watchlist created from the sidebar. The manage dialog has
 // its own inline field, so this is only for that entry point.
 function NewWatchlistModal({ onCancel, onCreate }) {
+  const { nameTaken } = useWatchlists();
   const [name, setName] = useState('');
   const inputRef = useRef(null);
+
+  // Blocks the submit as you type, rather than letting the server reject it.
+  const duplicate = nameTaken(name);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -22,7 +27,7 @@ function NewWatchlistModal({ onCancel, onCreate }) {
 
   function submit(e) {
     e.preventDefault();
-    if (name.trim()) onCreate(name.trim());
+    if (name.trim() && !duplicate) onCreate(name.trim());
   }
 
   return createPortal(
@@ -41,8 +46,15 @@ function NewWatchlistModal({ onCancel, onCreate }) {
           className="new-wl__input"
           value={name}
           placeholder="e.g. Semis, Dividends, Watch closely"
+          aria-invalid={duplicate}
+          aria-describedby={duplicate ? 'new-wl-error' : undefined}
           onChange={(e) => setName(e.target.value)}
         />
+        {duplicate && (
+          <p className="new-wl__error" id="new-wl-error" role="alert">
+            You already have a watchlist with that name
+          </p>
+        )}
         <div className="new-wl__actions">
           <button type="button" className="new-wl__btn" onClick={onCancel}>
             Cancel
@@ -50,7 +62,7 @@ function NewWatchlistModal({ onCancel, onCreate }) {
           <button
             type="submit"
             className="new-wl__btn new-wl__btn--primary"
-            disabled={!name.trim()}
+            disabled={!name.trim() || duplicate}
           >
             Create
           </button>

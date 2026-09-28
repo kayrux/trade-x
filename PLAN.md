@@ -247,19 +247,28 @@ UPDATE users SET is_admin = TRUE WHERE LOWER(email) = 'you@example.com';
 
 ```sql
 CREATE TABLE watchlists (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID REFERENCES users(id),
-    name        VARCHAR NOT NULL,
-    is_public   BOOLEAN DEFAULT FALSE,
-    created_at  TIMESTAMP DEFAULT NOW()
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       VARCHAR NOT NULL,
+    is_public  BOOLEAN NOT NULL DEFAULT FALSE,  -- reserved for the share links below
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX idx_watchlists_user ON watchlists (user_id, created_at);
+CREATE UNIQUE INDEX idx_watchlists_user_name_lower ON watchlists (user_id, LOWER(name));
+
+-- position is the drag-and-drop display order (0-based); added_at alone can't
+-- express a move. Deliberately not unique per watchlist — a reorder renumbers
+-- several rows in one statement.
 CREATE TABLE watchlist_symbols (
-    watchlist_id UUID REFERENCES watchlists(id),
-    symbol_id    VARCHAR REFERENCES symbols(id),
+    watchlist_id UUID    NOT NULL REFERENCES watchlists(id) ON DELETE CASCADE,
+    symbol_id    VARCHAR NOT NULL REFERENCES symbols(id)    ON DELETE CASCADE,
+    position     INTEGER NOT NULL,
     added_at     TIMESTAMP DEFAULT NOW(),
     PRIMARY KEY (watchlist_id, symbol_id)
 );
+
+CREATE INDEX idx_watchlist_symbols_order ON watchlist_symbols (watchlist_id, position);
 
 CREATE TABLE portfolio_holdings (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -316,6 +325,22 @@ Candle response: `{ symbol, resolution, candles: [{ ts, open, high, low, close, 
 | POST | `/auth/register` | public | → `201 { token, user }` |
 | POST | `/auth/login` | public | → `200 { token, user }` |
 | GET | `/auth/me` | required | → `{ user }`, re-read from the DB |
+
+### Phase 5 — Watchlists
+
+Every route requires auth and is scoped to the caller. A list that doesn't exist and one owned by
+someone else both answer `404`, so the ids of other users' watchlists can't be probed. `symbols` is
+an ordered array of plain tickers — the client enriches prices separately via `/symbols/batch`.
+
+| Method | Path | Auth | Description |
+| ------ | ---- | ---- | ----------- |
+| GET | `/watchlists` | required | → `[{ id, name, is_public, created_at, symbols: ["AAPL", …] }]` |
+| POST | `/watchlists` | required | `{ name }` → `201` the new list. Blank name → `New Watchlist`; duplicate → `400` |
+| PATCH | `/watchlists/:id` | required | `{ name }` → the updated list |
+| DELETE | `/watchlists/:id` | required | → `204`; symbol rows go with it via cascade |
+| POST | `/watchlists/:id/symbols` | required | `{ symbol }` → the updated list. Appends, idempotent. Unknown ticker → `400` |
+| PUT | `/watchlists/:id/symbols` | required | `{ symbols: [...] }` → the updated list. Full-array reorder |
+| DELETE | `/watchlists/:id/symbols/:symbol` | required | → `204` |
 
 ---
 

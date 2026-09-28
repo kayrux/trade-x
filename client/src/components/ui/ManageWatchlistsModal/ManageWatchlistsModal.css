@@ -135,6 +135,59 @@
   color: var(--color-text-muted);
 }
 
+/* Wraps a name input so its validation message sits directly beneath it. */
+.manage-wl__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+}
+
+/* In the list column the wrapper stands in for the name button, which fills
+   the row. */
+.manage-wl__list-row .manage-wl__field {
+  flex: 1;
+}
+
+/* The detail header is a fixed-height row, so the message floats instead of
+   taking space and pushing the search field out of line. */
+.manage-wl__field--float {
+  position: relative;
+  flex: 0 1 320px;
+  width: auto;
+}
+
+/* The wrapper now carries the width the input used to size itself to. */
+.manage-wl__field--float .manage-wl__title-input {
+  flex: 1;
+  width: 100%;
+}
+
+.manage-wl__field--float .manage-wl__field-error {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 2;
+}
+
+.manage-wl__field-error {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.manage-wl__create-input[aria-invalid='true'],
+.manage-wl__rename-input[aria-invalid='true'],
+.manage-wl__title-input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
 /* Rename in the detail header: matches the heading it replaces. */
 .manage-wl__title-input {
   min-width: 0;
@@ -279,63 +332,18 @@
 /* ---- Add symbol: button ⇄ search field, on the title's line ----
    The slot is right-anchored, so widening it grows the field leftward out of
    the button. It also anchors the shared search dropdown. */
-.manage-wl__add {
+/* Permanent search field, right-aligned in the header. Positioned so the
+   results panel drops out of it. */
+.manage-wl__search {
   position: relative;
   flex-shrink: 0;
   margin-left: auto;
-  width: 34px;
-  height: 34px;
-  transition: width 0.24s ease;
-}
-
-.manage-wl__add--open {
   width: min(360px, 100%);
-}
-
-.manage-wl__add-btn {
-  position: absolute;
-  right: 0;
-  top: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
   height: 34px;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  background: var(--color-surface);
-  cursor: pointer;
-  color: var(--color-text-muted);
-  z-index: 1;
-  transition: color 0.15s ease, border-color 0.15s ease, opacity 0.16s ease;
 }
 
-.manage-wl__add-btn:hover {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.manage-wl__add--open .manage-wl__add-btn {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Sized to the slot, so the field widens with it. */
-.manage-wl__add-field {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.16s ease;
-}
-
-.manage-wl__add--open .manage-wl__add-field {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.manage-wl__add-field .search-bar,
-.manage-wl__add-field .search-bar__input {
+.manage-wl__search .search-bar,
+.manage-wl__search .search-bar__input {
   width: 100%;
   height: 100%;
 }

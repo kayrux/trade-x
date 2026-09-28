@@ -10,10 +10,12 @@ import { useWatchlists } from '../../../context/WatchlistContext';
 import { getMicName } from '../../../lib/constants';
 import './ManageWatchlistsModal.css';
 
+const DUPLICATE_NAME_MESSAGE = 'You already have a watchlist with that name';
+
 function ManageWatchlistsModal({ onClose, initialSelectedId }) {
   const {
     watchlists, activeId, createWatchlist, deleteWatchlist, renameWatchlist,
-    addSymbol, removeSymbol, reorderSymbols,
+    addSymbol, removeSymbol, reorderSymbols, nameTaken,
   } = useWatchlists();
 
   // Selection here is local: browsing lists in the dialog must not move the
@@ -23,7 +25,6 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
   const symbols = selected?.symbols ?? [];
   const { quotes } = useWatchlistQuotes(symbols);
 
-  const [adding, setAdding] = useState(false);
   // Which list is being renamed, and from where: the detail title or the list
   // column. Both can target the same list, so the source picks the field.
   const [renaming, setRenaming] = useState(null);
@@ -41,8 +42,14 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
   const cancelledRef = useRef(false);
   const { results, loading, error } = useSymbolSearch(query);
 
+  // Checked as you type, so a colliding name is blocked in the field instead of
+  // coming back as a snackbar. Renaming a list to its own name is not a clash.
+  const createError = nameTaken(newName) ? DUPLICATE_NAME_MESSAGE : null;
+  const renameError =
+    renaming && nameTaken(renameValue, renaming.id) ? DUPLICATE_NAME_MESSAGE : null;
+
+  // Clears the field, which also dismisses the results.
   function closeSearch() {
-    setAdding(false);
     setQuery('');
   }
 
@@ -51,16 +58,12 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
       if (e.key !== 'Escape') return;
       // Escape backs out one layer at a time.
       if (pendingDelete) setPendingDelete(null);
-      else if (adding) closeSearch();
+      else if (query) closeSearch();
       else if (!creating && !renaming) onClose();
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [adding, creating, renaming, pendingDelete, onClose]);
-
-  useEffect(() => {
-    if (adding) searchInputRef.current?.focus();
-  }, [adding]);
+  }, [query, creating, renaming, pendingDelete, onClose]);
 
   useEffect(() => {
     if (creating) newNameRef.current?.focus();
@@ -76,9 +79,12 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
     setRenaming({ id: list.id, source });
   }
 
-  // Enter or blur commits; an empty name leaves the current one alone.
+  // Enter or blur commits; an empty name leaves the current one alone. A name
+  // already in use keeps the field open with its message rather than sending a
+  // request that the server would only reject.
   function commitRename() {
     if (cancelledRef.current) return;
+    if (renameError) return;
     if (renaming && renameValue.trim()) renameWatchlist(renaming.id, renameValue);
     setRenaming(null);
   }
@@ -107,12 +113,17 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
     setCreating(true);
   }
 
-  // Enter or blur commits; an empty name simply cancels.
-  function commitCreate() {
+  // Enter or blur commits; an empty name simply cancels. A duplicate keeps the
+  // field open with its message so the name can be fixed in place.
+  async function commitCreate() {
     if (cancelledRef.current) return;
+    if (createError) return;
     setCreating(false);
     if (!newName.trim()) return;
-    setSelectedId(createWatchlist(newName, { activate: false }));
+    const id = await createWatchlist(newName, { activate: false });
+    // A rejected name (duplicate, too long) leaves the selection alone; the
+    // context has already surfaced the reason.
+    if (id) setSelectedId(id);
     setNewName('');
   }
 
@@ -122,10 +133,10 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
     setNewName('');
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     const id = pendingDelete.id;
-    deleteWatchlist(id);
     setPendingDelete(null);
+    await deleteWatchlist(id);
     if (selectedId === id) {
       const next = watchlists.find((w) => w.id !== id);
       setSelectedId(next?.id ?? null);
@@ -145,8 +156,6 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
     setDragIndex(null);
     setDropIndex(null);
   }
-
-  const onlyList = watchlists.length <= 1;
 
   return createPortal(
     <div className="manage-wl__overlay" onMouseDown={onClose}>
@@ -175,19 +184,25 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
             </Tooltip>
             <div className="manage-wl__list-scroll">
               {creating && (
-                <input
-                  ref={newNameRef}
-                  className="manage-wl__create-input"
-                  value={newName}
-                  placeholder="Watchlist name"
-                  aria-label="New watchlist name"
-                  onChange={(e) => setNewName(e.target.value)}
-                  onBlur={commitCreate}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitCreate();
-                    else if (e.key === 'Escape') cancelCreate();
-                  }}
-                />
+                <div className="manage-wl__field">
+                  <input
+                    ref={newNameRef}
+                    className="manage-wl__create-input"
+                    value={newName}
+                    placeholder="Watchlist name"
+                    aria-label="New watchlist name"
+                    aria-invalid={Boolean(createError)}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onBlur={commitCreate}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitCreate();
+                      else if (e.key === 'Escape') cancelCreate();
+                    }}
+                  />
+                  {createError && (
+                    <p className="manage-wl__field-error" role="alert">{createError}</p>
+                  )}
+                </div>
               )}
               {watchlists.map((w) => (
                 <div
@@ -195,11 +210,17 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
                   className={`manage-wl__list-row${w.id === selected?.id ? ' manage-wl__list-row--active' : ''}`}
                 >
                   {renaming?.id === w.id && renaming.source === 'list' ? (
-                    <input
-                      className="manage-wl__rename-input"
-                      aria-label="Watchlist name"
-                      {...renameProps()}
-                    />
+                    <div className="manage-wl__field">
+                      <input
+                        className="manage-wl__rename-input"
+                        aria-label="Watchlist name"
+                        aria-invalid={Boolean(renameError)}
+                        {...renameProps()}
+                      />
+                      {renameError && (
+                        <p className="manage-wl__field-error" role="alert">{renameError}</p>
+                      )}
+                    </div>
                   ) : (
                     <button
                       className="manage-wl__list-item"
@@ -209,10 +230,11 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
                       {w.name} ({w.symbols.length})
                     </button>
                   )}
+                  {/* Deleting the last list is allowed — an account with no
+                      watchlists is a valid state. */}
                   <button
                     className="manage-wl__list-delete"
                     onClick={() => setPendingDelete(w)}
-                    disabled={onlyList}
                     aria-label={`Delete ${w.name}`}
                   >
                     <Trash2 size={14} />
@@ -223,13 +245,27 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
           </aside>
 
           <section className="manage-wl__detail">
+            {!selected ? (
+              <p className="manage-wl__empty">
+                No watchlists yet. Use Create Watchlist to add one.
+              </p>
+            ) : (
+            <>
             <div className="manage-wl__detail-header">
               {renaming?.id === selected?.id && renaming.source === 'title' ? (
-                <input
-                  className="manage-wl__title-input"
-                  aria-label="Watchlist name"
-                  {...renameProps()}
-                />
+                // Floating message: the header is a fixed-height row, so the
+                // error can't take space in the flow here.
+                <div className="manage-wl__field manage-wl__field--float">
+                  <input
+                    className="manage-wl__title-input"
+                    aria-label="Watchlist name"
+                    aria-invalid={Boolean(renameError)}
+                    {...renameProps()}
+                  />
+                  {renameError && (
+                    <p className="manage-wl__field-error" role="alert">{renameError}</p>
+                  )}
+                </div>
               ) : (
                 <>
                   <h3
@@ -248,42 +284,29 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
                 </>
               )}
 
-              {/* Fixed-height slot: the search field grows leftward out of the
-                  add button, which fades out as it opens. */}
-              <div className={`manage-wl__add${adding ? ' manage-wl__add--open' : ''}`}>
-                <Tooltip label="Add Symbol">
-                  <button
-                    className="manage-wl__add-btn"
-                    onClick={() => { setAdding(true); setQuery(''); }}
-                    aria-label="Add symbol"
-                    aria-expanded={adding}
-                    tabIndex={adding ? -1 : 0}
-                  >
-                    <Plus size={18} />
-                  </button>
-                </Tooltip>
+              {/* Always present rather than hidden behind an add button —
+                  filling a watchlist is what this dialog is for. Positioned so
+                  the results drop out of the field. */}
+              <div className="manage-wl__search">
+                <SearchBar
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onClear={closeSearch}
+                  inputRef={searchInputRef}
+                  placeholder="Search symbols to add..."
+                  ariaLabel="Search symbols to add"
+                  // Same blur delay the navbar uses, so a click elsewhere in
+                  // the dialog lands before the results close.
+                  onBlur={() => setTimeout(closeSearch, 150)}
+                />
 
-                <div className="manage-wl__add-field">
-                  <SearchBar
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onClear={closeSearch}
-                    inputRef={searchInputRef}
-                    // Same blur delay the navbar uses, so a click elsewhere in
-                    // the dialog lands before the field collapses.
-                    onBlur={() => setTimeout(closeSearch, 150)}
-                  />
-                </div>
-
-                {adding && (
-                  <SymbolSearchResults
-                    results={results}
-                    loading={loading}
-                    error={error}
-                    visible={query.trim().length > 0}
-                    onSelect={handleSelect}
-                  />
-                )}
+                <SymbolSearchResults
+                  results={results}
+                  loading={loading}
+                  error={error}
+                  visible={query.trim().length > 0}
+                  onSelect={handleSelect}
+                />
               </div>
             </div>
 
@@ -341,6 +364,8 @@ function ManageWatchlistsModal({ onClose, initialSelectedId }) {
                 )}
               </div>
             </div>
+            </>
+            )}
           </section>
         </div>
 
