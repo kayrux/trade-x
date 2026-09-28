@@ -24,6 +24,13 @@
   font-weight: 400;
 }
 
+/* The star is an icon button, not text — pull it out of baseline alignment so
+   it centres against the ticker rather than hanging off the text baseline. */
+.symbol-heading__action {
+  align-self: center;
+  display: inline-flex;
+}
+
 .symbol-heading__price-row {
   display: flex;
   align-items: baseline;

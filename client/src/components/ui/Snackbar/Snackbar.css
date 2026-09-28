@@ -31,20 +31,26 @@
   animation: snackbar-in 180ms ease-out;
 }
 
+/* The variant colours are translucent tints meant to sit on a solid surface.
+   The snackbar floats over page content, so layer each tint over the opaque
+   navbar background — a hint of transparency without the page bleeding through. */
 .snackbar--success {
-  background: var(--color-success-bg);
+  background: linear-gradient(var(--color-success-bg), var(--color-success-bg)),
+    var(--color-navbar-bg);
   border-color: var(--color-success-border);
   color: var(--color-success);
 }
 
 .snackbar--error {
-  background: var(--color-error-bg);
+  background: linear-gradient(var(--color-error-bg), var(--color-error-bg)),
+    var(--color-navbar-bg);
   border-color: var(--color-error-border);
   color: var(--color-error);
 }
 
 .snackbar--info {
-  background: var(--color-info-bg);
+  background: linear-gradient(var(--color-info-bg), var(--color-info-bg)),
+    var(--color-navbar-bg);
   border-color: var(--color-info-border);
   color: var(--color-info);
 }

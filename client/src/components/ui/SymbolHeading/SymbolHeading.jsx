@@ -1,7 +1,7 @@
 import { getMicCurrency } from '../../../lib/constants';
 import './SymbolHeading.css';
 
-function SymbolHeading({ symbol, quote, loading }) {
+function SymbolHeading({ symbol, quote, loading, action }) {
   const price = quote ? parseFloat(quote.last_price) : NaN;
   const hasPrice = !isNaN(price) && price > 0;
   const showPriceSkeleton = !hasPrice && (loading || quote?.price_source === null);
@@ -50,6 +50,7 @@ function SymbolHeading({ symbol, quote, loading }) {
       <div className="symbol-heading__row">
         <span className="symbol-heading__ticker">{symbol}</span>
         {quote?.name && <span className="symbol-heading__name">{quote.name}</span>}
+        {action && <span className="symbol-heading__action">{action}</span>}
       </div>
       {hasPrice ? (
         <div className="symbol-heading__price-row">

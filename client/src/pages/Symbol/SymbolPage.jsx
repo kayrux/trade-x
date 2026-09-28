@@ -26,8 +26,12 @@ function SymbolPage() {
         {symbol ? (
           <div className="symbol-page__content">
             <div className="symbol-page__header">
-              <SymbolHeading symbol={symbol} quote={quote} loading={loading} />
-              <WatchlistStar symbol={symbol} />
+              <SymbolHeading
+                symbol={symbol}
+                quote={quote}
+                loading={loading}
+                action={<WatchlistStar symbol={symbol} />}
+              />
             </div>
             <div className="symbol-page__body">
               <SymbolChart symbol={symbol} quote={quote} />
