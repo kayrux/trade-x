@@ -15,6 +15,77 @@
   margin: 0;
 }
 
+/* Account selector */
+.trades-panel__account-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.trades-panel__account-select {
+  flex: 1;
+  min-width: 160px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-navbar-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.trades-panel__account-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.trades-panel__account-actions button {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-navbar-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trades-panel__account-actions button:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}
+
+.trades-panel__empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trades-panel__empty-state > p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.trades-panel__account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trades-panel__account-form input,
+.trades-panel__account-form select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-navbar-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Position summary */
 .trades-panel__position {
   display: grid;
@@ -91,8 +162,24 @@
 
 .trades-panel__fields {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 10px;
+}
+
+.trades-panel__field select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-navbar-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.trades-panel__field select:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
 .trades-panel__field {

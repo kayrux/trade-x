@@ -10,6 +10,7 @@ import WatchlistStar from '../../components/ui/WatchlistStar/WatchlistStar';
 import { useQuote } from '../../hooks/useQuote';
 import { useTrades } from '../../hooks/useTrades';
 import { useAuth } from '../../context/AuthContext';
+import { useAccounts } from '../../context/AccountContext';
 import './SymbolPage.css';
 
 function SymbolPage() {
@@ -18,9 +19,14 @@ function SymbolPage() {
   const symbol = ticker ? decodeURIComponent(ticker) : null;
   const { quote, loading, error } = useQuote(symbol);
   const { user } = useAuth();
+  const { activeAccount } = useAccounts();
   // Lifted here so the chart's markers and the panel's position summary read
   // from one source and both refresh off a single refetch after a mutation.
-  const { trades, holding, loading: tradesLoading, refetch } = useTrades(symbol);
+  // Scoped to the selected account.
+  const { trades, holding, loading: tradesLoading, refetch } = useTrades(
+    symbol,
+    activeAccount?.id,
+  );
 
   // Navigating to a new symbol keeps the previous scroll position, so reset it.
   useEffect(() => {

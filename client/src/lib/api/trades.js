@@ -1,16 +1,16 @@
 import { API_BASE_URL } from '../constants/index';
 import { authFetch, throwFromResponse } from './auth';
 
-// Every /trades and /holdings route requires auth and is scoped to the caller,
+// Every /trades and /holdings route requires auth and is scoped to an account,
 // so all of these go through authFetch. A trade comes back as
-// { id, symbol, side, quantity, price, traded_at, note, updated_at }; a holding
-// as { symbol, quantity, avg_cost, realized_pnl, updated_at }.
+// { id, account_id, symbol, side, quantity, price, currency, traded_at, note,
+// updated_at }; a holding as
+// { symbol, quantity, avg_cost, realized_pnl, currency, updated_at }.
 
-export async function fetchTrades(symbol = null) {
-  const url = symbol
-    ? `${API_BASE_URL}/trades?symbol=${encodeURIComponent(symbol)}`
-    : `${API_BASE_URL}/trades`;
-  const res = await authFetch(url);
+export async function fetchTrades(accountId, symbol = null) {
+  const params = new URLSearchParams({ account_id: accountId });
+  if (symbol) params.set('symbol', symbol);
+  const res = await authFetch(`${API_BASE_URL}/trades?${params}`);
   if (!res.ok) await throwFromResponse(res, 'Could not load trades');
   return res.json();
 }
@@ -42,11 +42,10 @@ export async function deleteTrade(id) {
 
 // includeFlat keeps fully-closed positions (quantity 0) in the result, so a
 // per-symbol view can still show lifetime realized P&L on a name no longer held.
-export async function fetchHoldings({ includeFlat = false } = {}) {
-  const url = includeFlat
-    ? `${API_BASE_URL}/holdings?all=1`
-    : `${API_BASE_URL}/holdings`;
-  const res = await authFetch(url);
+export async function fetchHoldings(accountId, { includeFlat = false } = {}) {
+  const params = new URLSearchParams({ account_id: accountId });
+  if (includeFlat) params.set('all', '1');
+  const res = await authFetch(`${API_BASE_URL}/holdings?${params}`);
   if (!res.ok) await throwFromResponse(res, 'Could not load holdings');
   return res.json();
 }

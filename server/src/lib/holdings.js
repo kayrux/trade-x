@@ -13,8 +13,8 @@ class OversellError extends Error {
   }
 }
 
-// Replays a user's full trade history for one symbol (average-cost method) and
-// writes the resulting position into portfolio_holdings.
+// Replays an account's full trade history for one symbol (average-cost method)
+// and writes the resulting position into portfolio_holdings.
 //
 // Runs on a caller-supplied transaction `client` (not the pool) so it commits
 // atomically with the trade write that triggered it. Recomputing from scratch —
@@ -26,22 +26,26 @@ class OversellError extends Error {
 // throws OversellError, which rolls the triggering write back. Because the whole
 // history is replayed in traded_at order, this also catches an edit or an
 // out-of-order trade that would retroactively make some later sell an oversell.
-async function recomputeHolding(client, userId, symbolId) {
+async function recomputeHolding(client, accountId, symbolId) {
   const { rows } = await client.query(
-    `SELECT side, quantity, price, traded_at
+    `SELECT side, quantity, price, currency, traded_at
        FROM trades
-      WHERE user_id = $1 AND symbol_id = $2
+      WHERE account_id = $1 AND symbol_id = $2
       ORDER BY traded_at, created_at`,
-    [userId, symbolId],
+    [accountId, symbolId],
   );
 
   let qty = 0;
   let avgCost = 0; // cost of the open shares; only meaningful while qty > 0
   let realized = 0;
+  // All trades for a symbol in one account share a currency; carry the latest
+  // seen so the holding can show amounts without re-joining.
+  let currency = null;
 
   for (const t of rows) {
     const q = Number(t.quantity);
     const price = Number(t.price);
+    currency = t.currency;
 
     if (t.side === 'buy') {
       const nextQty = qty + q;
@@ -68,14 +72,15 @@ async function recomputeHolding(client, userId, symbolId) {
 
   await client.query(
     `INSERT INTO portfolio_holdings
-       (user_id, symbol_id, quantity, avg_cost, realized_pnl, updated_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())
-     ON CONFLICT (user_id, symbol_id) DO UPDATE
+       (account_id, symbol_id, quantity, avg_cost, realized_pnl, currency, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW())
+     ON CONFLICT (account_id, symbol_id) DO UPDATE
        SET quantity     = EXCLUDED.quantity,
            avg_cost     = EXCLUDED.avg_cost,
            realized_pnl = EXCLUDED.realized_pnl,
+           currency     = EXCLUDED.currency,
            updated_at   = NOW()`,
-    [userId, symbolId, qty, avgCostValue, realized],
+    [accountId, symbolId, qty, avgCostValue, realized, currency],
   );
 }
 
