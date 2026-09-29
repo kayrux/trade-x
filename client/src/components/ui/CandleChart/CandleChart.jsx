@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { createChart, CandlestickSeries, AreaSeries, CrosshairMode } from "lightweight-charts";
+import { createChart, CandlestickSeries, AreaSeries, CrosshairMode, createSeriesMarkers } from "lightweight-charts";
 import { useTheme } from "../../../context/ThemeContext";
 import "./CandleChart.css";
 
@@ -28,10 +28,11 @@ function toChartTime(ts, resolution) {
   return ts.split("T")[0];
 }
 
-function CandleChart({ candles, resolution, loading, error, chartType = "candles" }) {
+function CandleChart({ candles, resolution, loading, error, chartType = "candles", markers = [] }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
+  const markersRef = useRef(null);
   const { theme } = useTheme();
 
   // Create chart when mounted or when the series type changes (e.g. switching
@@ -65,11 +66,15 @@ function CandleChart({ candles, resolution, loading, error, chartType = "candles
 
     chartRef.current = chart;
     seriesRef.current = series;
+    // Markers (buy/sell pins) are a v5 primitive attached to the series, not a
+    // series method — recreated with the series when the chart type changes.
+    markersRef.current = createSeriesMarkers(series, []);
 
     return () => {
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      markersRef.current = null;
     };
   }, [chartType]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -104,6 +109,16 @@ function CandleChart({ candles, resolution, loading, error, chartType = "candles
     seriesRef.current.setData(data);
     chartRef.current.timeScale().fitContent();
   }, [candles, resolution, chartType]);
+
+  // Buy/sell markers. Lightweight Charts requires them sorted ascending by time,
+  // so sort a copy before handing them over.
+  useEffect(() => {
+    if (!markersRef.current) return;
+    const sorted = [...markers].sort((a, b) =>
+      a.time < b.time ? -1 : a.time > b.time ? 1 : 0,
+    );
+    markersRef.current.setMarkers(sorted);
+  }, [markers, chartType]);
 
   return (
     <div className="candle-chart">

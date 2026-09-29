@@ -13,6 +13,8 @@ const channelsRouter = require('./src/routes/channels');
 const picksRouter = require('./src/routes/picks');
 const authRouter = require('./src/routes/auth');
 const watchlistsRouter = require('./src/routes/watchlists');
+const tradesRouter = require('./src/routes/trades');
+const holdingsRouter = require('./src/routes/holdings');
 const { attachUser } = require('./src/middleware/auth');
 
 const app = express();
@@ -32,6 +34,8 @@ app.use('/news', newsRouter);
 app.use('/channels', channelsRouter);
 app.use('/picks', picksRouter);
 app.use('/watchlists', watchlistsRouter);
+app.use('/trades', tradesRouter);
+app.use('/holdings', holdingsRouter);
 
 // Sync symbols once at startup, then daily at midnight
 syncSymbols();

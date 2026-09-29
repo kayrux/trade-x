@@ -1,0 +1,247 @@
+.trades-panel {
+  background: var(--color-navbar-bg);
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.trades-panel__heading {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+/* Position summary */
+.trades-panel__position {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--color-navbar-border);
+  border-bottom: 1px solid var(--color-navbar-border);
+}
+
+.trades-panel__pos-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trades-panel__pos-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+}
+
+.trades-panel__pos-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.trades-panel__pos-value--up {
+  color: var(--color-pos);
+}
+
+.trades-panel__pos-value--down {
+  color: var(--color-neg);
+}
+
+/* Form */
+.trades-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trades-panel__side-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.trades-panel__side {
+  padding: 8px 0;
+  border-radius: 8px;
+  border: 1px solid var(--color-navbar-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.trades-panel__side--buy.is-active {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: var(--color-pos);
+  color: var(--color-pos);
+}
+
+.trades-panel__side--sell.is-active {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: var(--color-neg);
+  color: var(--color-neg);
+}
+
+.trades-panel__fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.trades-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.trades-panel__field > span {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.trades-panel__field input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-navbar-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.trades-panel__field input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.trades-panel__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.trades-panel__submit {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.trades-panel__submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.trades-panel__cancel {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--color-navbar-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Trade history */
+.trades-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.trades-panel__empty {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 4px 0;
+}
+
+.trades-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-surface-hover);
+}
+
+.trades-panel__badge {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.trades-panel__badge--buy {
+  background: var(--color-pos);
+}
+
+.trades-panel__badge--sell {
+  background: var(--color-neg);
+}
+
+.trades-panel__row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.trades-panel__row-line {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.trades-panel__row-date {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trades-panel__row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.trades-panel__row-actions button {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-navbar-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.trades-panel__row-actions button:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}

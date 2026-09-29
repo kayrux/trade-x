@@ -15,7 +15,9 @@ function marketDateStr(date = new Date()) {
 }
 
 
-function SymbolChart({ symbol, quote }) {
+const MARKER_COLORS = { buy: '#22c55e', sell: '#ef4444' };
+
+function SymbolChart({ symbol, quote, trades = [] }) {
   const [activeMode, setActiveMode] = useState('range');
   const [resolution, setResolution] = useState('Daily');
   const [range, setRange] = useState('1Y');
@@ -74,6 +76,20 @@ function SymbolChart({ symbol, quote }) {
     return candles;
   }, [candles, quote, symbol]);
 
+  // Buy/sell pins are only shown on the Daily chart, where a trade's calendar
+  // day maps 1:1 to a bar. Weekly/monthly are aggregated views, so a trade date
+  // wouldn't line up with a bar's timestamp — omit markers there.
+  const markers = useMemo(() => {
+    if (resolution !== 'Daily' || !trades.length) return [];
+    return trades.map((t) => ({
+      time: t.traded_at.split('T')[0], // matches the daily bars' YYYY-MM-DD key
+      position: t.side === 'buy' ? 'belowBar' : 'aboveBar',
+      shape: t.side === 'buy' ? 'arrowUp' : 'arrowDown',
+      color: MARKER_COLORS[t.side],
+      text: t.side === 'buy' ? 'B' : 'S',
+    }));
+  }, [trades, resolution]);
+
   return (
     <div className="symbol-chart">
       <CandleChart
@@ -83,6 +99,7 @@ function SymbolChart({ symbol, quote }) {
         loading={loading}
         error={error}
         chartType={chartType}
+        markers={markers}
       />
       <div className="symbol-chart__footer">
         <ResolutionSwitcher

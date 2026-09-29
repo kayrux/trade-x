@@ -4,9 +4,12 @@ import PageLayout from '../../components/layouts/PageLayout/PageLayout';
 import SymbolHeading from '../../components/ui/SymbolHeading/SymbolHeading';
 import SymbolChart from '../../components/ui/SymbolChart/SymbolChart';
 import SymbolDetail from '../../components/ui/SymbolDetail/SymbolDetail';
+import TradesPanel from '../../components/ui/TradesPanel/TradesPanel';
 import CompanyNews from '../../components/ui/CompanyNews/CompanyNews';
 import WatchlistStar from '../../components/ui/WatchlistStar/WatchlistStar';
 import { useQuote } from '../../hooks/useQuote';
+import { useTrades } from '../../hooks/useTrades';
+import { useAuth } from '../../context/AuthContext';
 import './SymbolPage.css';
 
 function SymbolPage() {
@@ -14,6 +17,10 @@ function SymbolPage() {
   // Commodities are namespaced (AV:WTI), so links encode the segment.
   const symbol = ticker ? decodeURIComponent(ticker) : null;
   const { quote, loading, error } = useQuote(symbol);
+  const { user } = useAuth();
+  // Lifted here so the chart's markers and the panel's position summary read
+  // from one source and both refresh off a single refetch after a mutation.
+  const { trades, holding, loading: tradesLoading, refetch } = useTrades(symbol);
 
   // Navigating to a new symbol keeps the previous scroll position, so reset it.
   useEffect(() => {
@@ -34,9 +41,19 @@ function SymbolPage() {
               />
             </div>
             <div className="symbol-page__body">
-              <SymbolChart symbol={symbol} quote={quote} />
+              <SymbolChart symbol={symbol} quote={quote} trades={trades} />
               <SymbolDetail symbol={symbol} quote={quote} loading={loading} error={error} />
             </div>
+            {user && (
+              <TradesPanel
+                symbol={symbol}
+                quote={quote}
+                trades={trades}
+                holding={holding}
+                loading={tradesLoading}
+                refetch={refetch}
+              />
+            )}
             <CompanyNews symbol={symbol} />
           </div>
         ) : (

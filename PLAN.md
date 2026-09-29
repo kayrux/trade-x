@@ -131,13 +131,15 @@ See [Accounts — Phase 4 Detail](#accounts--phase-4-detail) below.
 
 ### Phase 5 — Watchlists & Portfolios ← **Current focus**
 
-- [ ] Watchlist creation and management
-- [ ] Portfolio holdings (quantity, average cost)
+- [x] Watchlist creation and management
+- [x] Portfolio holdings (quantity, average cost) — delivered via Phase 6 trades, which
+      maintain `portfolio_holdings` (now also tracking realized P&L)
 - [ ] Public share links for watchlists and portfolios (read-only)
 
 ### Phase 6 — Trades & Activity
 
-- [ ] Trade tracking on top of user accounts
+- [x] Trade tracking on top of user accounts — dated buy/sell executions that pin the symbol's
+      chart (buy/sell markers) and roll up into `portfolio_holdings`
 
 ---
 
@@ -270,15 +272,49 @@ CREATE TABLE watchlist_symbols (
 
 CREATE INDEX idx_watchlist_symbols_order ON watchlist_symbols (watchlist_id, position);
 
+-- Maintained aggregate, one row per (user, symbol). Not written directly: the
+-- /trades routes recompute it from the trade history on every trade mutation
+-- (see server/src/lib/holdings.js), so it never drifts from the trades. Full
+-- DDL in 007_trades.sql.
 CREATE TABLE portfolio_holdings (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id    UUID REFERENCES users(id),
-    symbol_id  VARCHAR REFERENCES symbols(id),
-    quantity   DECIMAL NOT NULL,
-    avg_cost   DECIMAL,
-    added_at   TIMESTAMP DEFAULT NOW()
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID    NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+    symbol_id    VARCHAR NOT NULL REFERENCES symbols(id) ON DELETE CASCADE,
+    quantity     DECIMAL(18,6) NOT NULL DEFAULT 0,   -- net open shares (buys - sells)
+    avg_cost     DECIMAL(18,6),                      -- average cost of open shares; NULL when flat
+    realized_pnl DECIMAL(18,6) NOT NULL DEFAULT 0,   -- lifetime realized gain/loss (avg-cost method)
+    updated_at   TIMESTAMP DEFAULT NOW(),
+    UNIQUE (user_id, symbol_id)
 );
 ```
+
+### Phase 6 — Trades
+
+Dated buy/sell executions, per user. Each trade both anchors a marker on its symbol's chart and
+feeds the `portfolio_holdings` recompute above. Full DDL in `007_trades.sql`.
+
+```sql
+CREATE TABLE trades (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID    NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+    symbol_id  VARCHAR NOT NULL REFERENCES symbols(id) ON DELETE CASCADE,
+    side       VARCHAR NOT NULL CHECK (side IN ('buy', 'sell')),
+    quantity   DECIMAL(18,6) NOT NULL CHECK (quantity > 0),
+    price      DECIMAL(18,6) NOT NULL CHECK (price >= 0),  -- per share
+    traded_at  TIMESTAMPTZ   NOT NULL,                     -- anchors the chart marker
+    note       VARCHAR(280),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_trades_user_symbol ON trades (user_id, symbol_id, traded_at);
+```
+
+> **Holdings are derived, not authored.** Never `INSERT`/`UPDATE` `portfolio_holdings` directly —
+> write a `trade` and let `recomputeHolding` rewrite the row. It replays the whole history
+> (avg-cost method), so edits, deletes, and out-of-order `traded_at` all stay correct. The book
+> is long-only: a replay whose running quantity would go negative throws `OversellError`, which
+> the route turns into a `400` and the transaction rolls back.
 
 ---
 
@@ -341,6 +377,22 @@ an ordered array of plain tickers — the client enriches prices separately via 
 | POST | `/watchlists/:id/symbols` | required | `{ symbol }` → the updated list. Appends, idempotent. Unknown ticker → `400` |
 | PUT | `/watchlists/:id/symbols` | required | `{ symbols: [...] }` → the updated list. Full-array reorder |
 | DELETE | `/watchlists/:id/symbols/:symbol` | required | → `204` |
+
+### Phase 6 — Trades & Holdings
+
+Every route requires auth and is scoped to the caller; a trade owned by someone else answers
+`404`. Trade mutations recompute the affected holding in the same transaction, so holdings are
+read-only from the API's perspective. The book is **long-only**: any mutation that would leave a
+sell oversold at its point in time (including an edit, or deleting a buy a later sell depends on)
+is rejected `400` and rolled back.
+
+| Method | Path | Auth | Description |
+| ------ | ---- | ---- | ----------- |
+| GET | `/trades?symbol=AAPL` | required | → `[{ id, symbol, side, quantity, price, traded_at, note, updated_at }]`, oldest first. `symbol` optional |
+| POST | `/trades` | required | `{ symbol, side, quantity, price, traded_at, note? }` → `201` the new trade. Unknown ticker → `400`; oversell → `400` |
+| PATCH | `/trades/:id` | required | Partial `{ side?, quantity?, price?, traded_at?, note? }` → the updated trade. Oversell → `400` |
+| DELETE | `/trades/:id` | required | → `204`. Deleting a buy that a later sell needs → `400` |
+| GET | `/holdings` | required | → `[{ symbol, quantity, avg_cost, realized_pnl, updated_at }]`. `?all=1` includes flat (closed) positions |
 
 ---
 
