@@ -1,0 +1,196 @@
+.portfolio {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* Header ------------------------------------------------------------------ */
+.portfolio__header {
+  margin-bottom: 1.25rem;
+}
+
+.portfolio__value-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.portfolio__value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.portfolio__eye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.portfolio__eye:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+.portfolio__change {
+  margin-top: 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.portfolio__change--up { color: var(--color-pos); }
+.portfolio__change--down { color: var(--color-neg); }
+.portfolio__change--flat { color: var(--color-text-muted); }
+
+/* Chart ------------------------------------------------------------------- */
+.portfolio__chart-card {
+  margin-bottom: 2rem;
+}
+
+.portfolio__ranges {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.5rem;
+}
+
+/* Accounts ---------------------------------------------------------------- */
+.portfolio__section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 0.75rem;
+}
+
+.portfolio__account-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 1rem;
+  margin-bottom: 0.6rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.portfolio__account-row:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-surface-active);
+}
+
+.portfolio__account-row--skeleton {
+  height: 68px;
+  cursor: default;
+}
+
+.portfolio__skel {
+  display: block;
+  width: 40%;
+  height: 1rem;
+  border-radius: 6px;
+  background: var(--color-surface-hover);
+  animation: portfolio-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes portfolio-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.portfolio__account-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-surface-active);
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+.portfolio__account-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.portfolio__account-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portfolio__account-type {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.portfolio__account-figures {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.portfolio__account-value {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.portfolio__account-return {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.portfolio__account-return--up { color: var(--color-pos); }
+.portfolio__account-return--down { color: var(--color-neg); }
+.portfolio__account-return--flat { color: var(--color-text-muted); }
+
+.portfolio__account-chevron {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* Empty state ------------------------------------------------------------- */
+.portfolio__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.portfolio__empty p {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.portfolio__empty span {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .portfolio__value { font-size: 2rem; }
+}

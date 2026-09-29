@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Sparkles,
+  Briefcase,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
@@ -68,6 +69,13 @@ function Sidebar() {
           <NavLink to="/picks" className={itemClass}>
             <Sparkles size={20} className="sidebar__icon" />
             <span className="sidebar__item-label">Picks</span>
+          </NavLink>
+        ))}
+
+        {navTip('Portfolio', (
+          <NavLink to="/portfolio" className={itemClass}>
+            <Briefcase size={20} className="sidebar__icon" />
+            <span className="sidebar__item-label">Portfolio</span>
           </NavLink>
         ))}
       </nav>

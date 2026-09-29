@@ -14,6 +14,8 @@ import SyncHistoryPage from './pages/YouTuberPicks/SyncHistoryPage';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Account from './pages/Account/Account';
+import Portfolio from './pages/Portfolio/Portfolio';
+import AccountDetails from './pages/AccountDetails/AccountDetails';
 import './App.css';
 
 // Legacy /dashboard?symbol=AAPL links — bookmarks, shared URLs — land on the
@@ -48,6 +50,22 @@ function App() {
                       element={
                         <RequireAuth>
                           <Account />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/portfolio"
+                      element={
+                        <RequireAuth>
+                          <Portfolio />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/account-details/:id"
+                      element={
+                        <RequireAuth>
+                          <AccountDetails />
                         </RequireAuth>
                       }
                     />

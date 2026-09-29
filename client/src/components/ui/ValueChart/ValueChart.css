@@ -1,0 +1,43 @@
+.value-chart {
+  position: relative;
+  width: 100%;
+  height: 340px;
+}
+
+.value-chart__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.value-chart__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.value-chart__overlay--error {
+  color: var(--color-neg);
+  font-size: 0.875rem;
+}
+
+.value-chart__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: value-chart-spin 0.7s linear infinite;
+}
+
+@keyframes value-chart-spin {
+  to { transform: rotate(360deg); }
+}
+
+.value-chart__empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}

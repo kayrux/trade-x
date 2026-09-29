@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { UUID_RE, resolveSymbolIds } = require('../lib/symbols');
 const { findOwnedAccount } = require('../lib/accounts');
 const { recomputeHolding } = require('../lib/holdings');
+const { invalidateAccountValueCache } = require('../lib/portfolioValue');
 
 const router = express.Router();
 
@@ -155,6 +156,7 @@ router.post('/', requireAuth, async (req, res) => {
        values.currency, values.traded_at, values.note ?? null],
     );
     await recomputeHolding(client, accountId, symbolId);
+    await invalidateAccountValueCache(client, accountId);
     await client.query('COMMIT');
 
     const [trade] = await selectTrades(accountId, { tradeId: rows[0].id });
@@ -193,6 +195,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
       params,
     );
     await recomputeHolding(client, owned.account_id, owned.symbol_id);
+    await invalidateAccountValueCache(client, owned.account_id);
     await client.query('COMMIT');
 
     const [trade] = await selectTrades(owned.account_id, { tradeId: req.params.id });
@@ -215,6 +218,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     await client.query('BEGIN');
     await client.query(`DELETE FROM trades WHERE id = $1`, [req.params.id]);
     await recomputeHolding(client, owned.account_id, owned.symbol_id);
+    await invalidateAccountValueCache(client, owned.account_id);
     await client.query('COMMIT');
 
     res.status(204).end();

@@ -1,0 +1,211 @@
+.account-details {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+
+.account-details__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem 0.35rem 0.4rem;
+  margin-bottom: 1rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.account-details__back:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+/* Header ------------------------------------------------------------------ */
+.account-details__header {
+  margin-bottom: 1.25rem;
+}
+
+.account-details__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+}
+
+.account-details__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.account-details__type {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-surface-active);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.account-details__value {
+  display: block;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.account-details__change {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.account-details__change--up { color: var(--color-pos); }
+.account-details__change--down { color: var(--color-neg); }
+.account-details__change--flat { color: var(--color-text-muted); }
+
+/* Chart ------------------------------------------------------------------- */
+.account-details__chart-card {
+  margin-bottom: 2rem;
+}
+
+.account-details__ranges {
+  display: flex;
+  margin-top: 0.5rem;
+}
+
+/* Holdings ---------------------------------------------------------------- */
+.account-details__section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 0.75rem;
+}
+
+.account-details__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.account-details__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.account-details__table th {
+  text-align: left;
+  padding: 0.85rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.account-details__table th.num,
+.account-details__table td.num {
+  text-align: right;
+}
+
+.account-details__table td {
+  padding: 0.85rem 1rem;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.account-details__row:last-child td {
+  border-bottom: none;
+}
+
+.account-details__row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.account-details__row:hover {
+  background: var(--color-surface-hover);
+}
+
+.account-details__sym {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.account-details__ticker {
+  font-weight: 700;
+}
+
+.account-details__name {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-details__strong {
+  font-weight: 700;
+}
+
+.account-details__return {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.account-details__return-abs { font-weight: 600; }
+.account-details__return-abs--up { color: var(--color-pos); }
+.account-details__return-abs--down { color: var(--color-neg); }
+.account-details__return-abs--flat { color: var(--color-text-muted); }
+
+.account-details__badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+}
+
+.account-details__badge--up {
+  color: var(--color-pos);
+  background: var(--color-success-bg);
+}
+
+.account-details__badge--down {
+  color: var(--color-neg);
+  background: var(--color-error-bg);
+}
+
+.account-details__badge--flat {
+  color: var(--color-text-muted);
+  background: var(--color-surface-active);
+}
+
+/* Empty / not-found ------------------------------------------------------- */
+.account-details__empty {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: 1rem;
+}
+
+.account-details__empty--card {
+  text-align: center;
+  padding: 3rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}

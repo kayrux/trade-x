@@ -134,12 +134,17 @@ See [Accounts — Phase 4 Detail](#accounts--phase-4-detail) below.
 - [x] Watchlist creation and management
 - [x] Portfolio holdings (quantity, average cost) — delivered via Phase 6 trades, which
       maintain `portfolio_holdings` (now also tracking realized P&L)
+- [x] Portfolio views — `/portfolio` (total value chart + per-account "Investing" list) and
+      `/account-details/:id` (account value chart + priced holdings table), on the `/portfolio/*`
+      routes and the `portfolio_value_daily` history cache
 - [ ] Public share links for watchlists and portfolios (read-only)
 
 ### Phase 6 — Trades & Activity
 
 - [x] Trade tracking on top of user accounts — dated buy/sell executions that pin the symbol's
       chart (buy/sell markers) and roll up into `portfolio_holdings`
+- [x] Portfolio value over time — market value reconstructed from trades × daily closes, cached
+      per (account, day) in `portfolio_value_daily`, recomputed live for today
 
 ---
 
@@ -329,6 +334,27 @@ CREATE TABLE portfolio_holdings (
 > all stay correct. The book is long-only: a replay whose running quantity would go negative
 > throws `OversellError`, which the route turns into a `400` and the transaction rolls back.
 
+**Portfolio value history** (`009_portfolio_value.sql`) caches one market-value snapshot per
+(account, day) so the Portfolio and Account Details charts can plot value over time cheaply.
+
+```sql
+CREATE TABLE portfolio_value_daily (
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    date       DATE NOT NULL,
+    value      DECIMAL(18,2) NOT NULL,   -- market value of open positions at that day's close
+    PRIMARY KEY (account_id, date)
+);
+```
+
+> **Filled lazily, on read; today is never stored.** A history request finds the past trading
+> days it's missing, computes them from the trade history × daily candle closes
+> (`value(D) = Σ sharesHeld(D) × close(D)`), and inserts them — see `lib/portfolioValue.js`. Past
+> days are immutable once closed, so later reads just fetch. **Today** is recomputed live from
+> `symbol_quotes` (candle-close fallback) on every read, since it keeps moving. A trade mutation
+> clears the account's cached rows (`invalidateAccountValueCache`) because an edit/delete changes
+> history retroactively; they recompute on the next read. Values are **summed nominally across
+> currencies** — no FX conversion (same simplification the holdings UI makes).
+
 ---
 
 ## API Endpoints
@@ -411,6 +437,10 @@ sell depends on) is rejected `400` and rolled back.
 | PATCH | `/trades/:id` | required | Partial `{ side?, quantity?, price?, currency?, traded_at?, note? }` → the updated trade. Oversell → `400` |
 | DELETE | `/trades/:id` | required | → `204`. Deleting a buy that a later sell needs → `400` |
 | GET | `/holdings?account_id=…` | required | → `[{ symbol, quantity, avg_cost, realized_pnl, currency, updated_at }]`. `?all=1` includes flat (closed) positions |
+| GET | `/portfolio/summary` | required | → `{ total_value, cost_basis, return_abs, return_pct, accounts: [{ id, name, type, value, cost_basis, return_abs, return_pct }] }`. Positions priced at the current market |
+| GET | `/portfolio/history?range=ytd` | required | → `{ range, series: [{ date, value }] }` summed across all the user's accounts. `range` ∈ `1w`\|`1m`\|`3m`\|`6m`\|`ytd`\|`1y`\|`all` |
+| GET | `/portfolio/accounts/:id` | required | → `{ account, summary, holdings: [{ symbol, name, currency, quantity, avg_cost, price, market_value, cost_value, realized_pnl, return_abs, return_pct }] }`. Foreign/missing → `404` |
+| GET | `/portfolio/accounts/:id/history?range=ytd` | required | → `{ range, series: [{ date, value }] }` for one account |
 
 ---
 
