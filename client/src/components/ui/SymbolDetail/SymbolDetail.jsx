@@ -94,7 +94,10 @@ function SymbolDetail({ symbol, quote, loading, error }) {
 
   return (
     <div className="symbol-detail">
-      <p className="symbol-detail__heading">Market Details</p>
+      <div className="symbol-detail__header">
+        <p className="symbol-detail__heading">Market Details</p>
+        {syncedLabel && <span className="symbol-detail__synced">{syncedLabel}</span>}
+      </div>
       <div className="symbol-detail__stats">
         <StatCell
           label="High"
@@ -138,8 +141,6 @@ function SymbolDetail({ symbol, quote, loading, error }) {
           value={quote.exchange ? getMicName(quote.exchange) : "—"}
         />
       </div>
-
-      {syncedLabel && <p className="symbol-detail__synced">{syncedLabel}</p>}
     </div>
   );
 }

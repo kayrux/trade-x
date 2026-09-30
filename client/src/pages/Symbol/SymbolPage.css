@@ -29,9 +29,24 @@
   width: 100%;
 }
 
+/* Trade panel sits where Market Details used to — a fixed right-hand column
+   that sticks below the navbar as the rest of the page scrolls. */
+.symbol-page__body .trades-panel {
+  width: 360px;
+  flex-shrink: 0;
+  position: sticky;
+  top: calc(var(--navbar-height) + 16px);
+  align-self: flex-start;
+}
+
 @media (max-width: 900px) {
   .symbol-page__body {
     flex-direction: column;
+  }
+
+  .symbol-page__body .trades-panel {
+    width: 100%;
+    position: static;
   }
 }
 

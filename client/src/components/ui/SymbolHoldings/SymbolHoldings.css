@@ -1,0 +1,123 @@
+.symbol-holdings {
+  background: var(--color-navbar-bg);
+  border: 1px solid var(--color-navbar-border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.symbol-holdings__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.symbol-holdings__title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.symbol-holdings__table-wrap {
+  overflow-x: auto;
+}
+
+.symbol-holdings__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.symbol-holdings__table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-navbar-border);
+}
+
+.symbol-holdings__table td {
+  padding: 12px;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-navbar-border);
+}
+
+.symbol-holdings__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.symbol-holdings__table th.num,
+.symbol-holdings__table td.num {
+  text-align: right;
+}
+
+.symbol-holdings__table th:first-child,
+.symbol-holdings__table td:first-child {
+  padding-left: 0;
+}
+
+.symbol-holdings__table th:last-child,
+.symbol-holdings__table td:last-child {
+  padding-right: 0;
+}
+
+.symbol-holdings__shares {
+  font-weight: 700;
+}
+
+.symbol-holdings__account {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--color-surface-active);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.symbol-holdings__strong {
+  font-weight: 700;
+}
+
+.symbol-holdings__return {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.symbol-holdings__return-abs {
+  font-weight: 600;
+}
+
+.symbol-holdings__return-abs.up { color: var(--color-pos); }
+.symbol-holdings__return-abs.down { color: var(--color-neg); }
+.symbol-holdings__return-abs.flat { color: var(--color-text-muted); }
+
+.symbol-holdings__badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.symbol-holdings__badge.up {
+  color: var(--color-pos);
+  background: var(--color-success-bg);
+}
+
+.symbol-holdings__badge.down {
+  color: var(--color-neg);
+  background: var(--color-error-bg);
+}
+
+.symbol-holdings__badge.flat {
+  color: var(--color-text-muted);
+  background: var(--color-surface-active);
+}
