@@ -57,6 +57,24 @@ export function changeClass(val) {
   return n > 0 ? 'up' : 'down';
 }
 
+// Rebases a raw {date, value, invested} series so contributions (buys, net of
+// sells) are treated as capital present from the start rather than as gains.
+//
+// A new buy adds equally to market value and to `invested`, so plotting raw
+// value would step up on every deposit and read as a gain (a first buy would
+// look like +∞%). We instead plot value + (investedLast − invested): each day is
+// lifted by the contributions made *after* it, so deposits cause no jump and only
+// market movement moves the line. The final point is unchanged (investedLast −
+// investedLast = 0), so the chart still ends at the real current value.
+export function adjustedSeries(series) {
+  if (!series || !series.length) return [];
+  const investedLast = Number(series[series.length - 1].invested ?? 0);
+  return series.map((p) => ({
+    date: p.date,
+    value: Number(p.value) + (investedLast - Number(p.invested ?? 0)),
+  }));
+}
+
 // Change over a value series: last vs first point. Returns null when there's
 // nothing to compare or the baseline is zero.
 export function seriesChange(series) {

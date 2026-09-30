@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 import PageLayout from '../../components/layouts/PageLayout/PageLayout';
 import ValueChart from '../../components/ui/ValueChart/ValueChart';
 import ResolutionSwitcher from '../../components/ui/ResolutionSwitcher/ResolutionSwitcher';
+import AccountModal from '../../components/ui/AccountModal/AccountModal';
 import { fetchAccountDetails, fetchAccountHistory } from '../../lib/api/portfolio';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { accountLabel } from '../../context/AccountContext';
 import {
   RANGES,
   rangeSubtitle,
@@ -13,6 +15,7 @@ import {
   formatSignedMoney,
   formatPercent,
   formatQty,
+  adjustedSeries,
   seriesChange,
   changeClass,
 } from '../Portfolio/portfolioFormat';
@@ -92,6 +95,7 @@ function AccountDetails() {
   const [details, setDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const [range, setRange] = useState('YTD');
   const [series, setSeries] = useState([]);
@@ -102,20 +106,21 @@ function AccountDetails() {
     [showSnackbar],
   );
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadDetails = useCallback(() => {
     setDetailsLoading(true);
     setNotFound(false);
-    fetchAccountDetails(id)
-      .then((data) => !cancelled && setDetails(data))
+    return fetchAccountDetails(id)
+      .then((data) => setDetails(data))
       .catch((err) => {
-        if (cancelled) return;
         if (err?.status === 404) setNotFound(true);
         else reportError(err);
       })
-      .finally(() => !cancelled && setDetailsLoading(false));
-    return () => { cancelled = true; };
+      .finally(() => setDetailsLoading(false));
   }, [id, reportError]);
+
+  useEffect(() => {
+    loadDetails();
+  }, [loadDetails]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,10 +139,22 @@ function AccountDetails() {
   const account = details?.account;
   const summary = details?.summary;
   const holdings = details?.holdings ?? [];
-  const change = seriesChange(series);
+  // Deposit-adjusted so buys aren't read as gains (see adjustedSeries).
+  const chartSeries = useMemo(() => adjustedSeries(series), [series]);
+  const change = seriesChange(chartSeries);
 
   return (
     <PageLayout>
+      {showSettings && account && (
+        <AccountModal
+          account={account}
+          onCancel={() => setShowSettings(false)}
+          onSaved={() => {
+            setShowSettings(false);
+            loadDetails();
+          }}
+        />
+      )}
       <div className="account-details">
         <button type="button" className="account-details__back" onClick={() => navigate('/portfolio')}>
           <ArrowLeft size={16} />
@@ -152,8 +169,22 @@ function AccountDetails() {
           <>
             <header className="account-details__header">
               <div className="account-details__title-row">
-                <h1 className="account-details__title">{account?.name || '—'}</h1>
-                {account?.type && <span className="account-details__type">{account.type}</span>}
+                <h1 className="account-details__title">
+                  {account ? accountLabel(account) : '—'}
+                </h1>
+                {account?.name && account?.type && (
+                  <span className="account-details__type">{account.type}</span>
+                )}
+                {account && (
+                  <button
+                    type="button"
+                    className="account-details__settings"
+                    onClick={() => setShowSettings(true)}
+                    aria-label="Account settings"
+                  >
+                    <Settings size={16} />
+                  </button>
+                )}
               </div>
               <span className="account-details__value">
                 {detailsLoading ? '—' : formatMoney(summary?.value ?? 0)}
@@ -166,7 +197,7 @@ function AccountDetails() {
             </header>
 
             <section className="account-details__chart-card">
-              <ValueChart series={series} loading={historyLoading} />
+              <ValueChart series={chartSeries} loading={historyLoading} />
               <div className="account-details__ranges">
                 <ResolutionSwitcher resolution={range} onChange={setRange} options={RANGES} />
               </div>

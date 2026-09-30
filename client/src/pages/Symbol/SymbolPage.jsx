@@ -23,7 +23,7 @@ function SymbolPage() {
   // Lifted here so the chart's markers and the panel's position summary read
   // from one source and both refresh off a single refetch after a mutation.
   // Scoped to the selected account.
-  const { trades, holding, loading: tradesLoading, refetch } = useTrades(
+  const { trades, loading: tradesLoading, refetch } = useTrades(
     symbol,
     activeAccount?.id,
   );
@@ -55,7 +55,6 @@ function SymbolPage() {
                 symbol={symbol}
                 quote={quote}
                 trades={trades}
-                holding={holding}
                 loading={tradesLoading}
                 refetch={refetch}
               />

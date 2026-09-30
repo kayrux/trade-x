@@ -55,6 +55,24 @@
   border-radius: 999px;
 }
 
+.account-details__settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.account-details__settings:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
 .account-details__value {
   display: block;
   font-size: 2.25rem;

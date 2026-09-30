@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { createTrade, updateTrade, deleteTrade } from '../../../lib/api/trades';
+import { fetchAccountDetails } from '../../../lib/api/portfolio';
 import { useSnackbar } from '../../../context/SnackbarContext';
-import { useAccounts } from '../../../context/AccountContext';
+import { useAccounts, accountLabel } from '../../../context/AccountContext';
 import { getMicCurrency } from '../../../lib/constants';
 import './TradesPanel.css';
 
@@ -17,17 +19,43 @@ function todayStr() {
   return new Intl.DateTimeFormat('en-CA').format(new Date());
 }
 
-function money(val, currency) {
+const numFmt = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+// "$3,975.00" — dollar sign + thousands separators, no currency code.
+function dollar(val) {
   const n = parseFloat(val);
   if (!Number.isFinite(n)) return '—';
-  return `${currency ? `${currency} ` : '$'}${n.toFixed(2)}`;
+  return `$${numFmt.format(n)}`;
 }
 
-function signedMoney(val, currency) {
+// "+$1,706.27" / "−$427.45"
+function signedDollar(val) {
   const n = parseFloat(val);
-  const prefix = currency ? `${currency} ` : '$';
-  if (!Number.isFinite(n) || n === 0) return `${prefix}0.00`;
-  return `${n < 0 ? '-' : '+'}${prefix}${Math.abs(n).toFixed(2)}`;
+  if (!Number.isFinite(n)) return '—';
+  return `${n < 0 ? '−' : '+'}$${numFmt.format(Math.abs(n))}`;
+}
+
+// "$453.78 USD" — an activity amount, tagged with its currency.
+function dollarAmount(val, currency) {
+  const base = dollar(val);
+  return base !== '—' && currency ? `${base} ${currency}` : base;
+}
+
+function sideLabel(side) {
+  return side === 'buy' ? 'Buy' : 'Sell';
+}
+
+// "YYYY-MM-DD" → "September 24, 2026" in local time (parsed as local midnight so
+// the calendar day doesn't shift).
+function dateHeading(day) {
+  return new Date(`${day}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 function qtyLabel(val) {
@@ -37,10 +65,11 @@ function qtyLabel(val) {
   return String(Number(n.toFixed(6)));
 }
 
+// up / down / flat, for the pos/neg color classes.
 function pnlClass(val) {
   const n = parseFloat(val);
-  if (!Number.isFinite(n) || n === 0) return '';
-  return n > 0 ? 'trades-panel__pos-value--up' : 'trades-panel__pos-value--down';
+  if (!Number.isFinite(n) || n === 0) return 'flat';
+  return n > 0 ? 'up' : 'down';
 }
 
 const emptyForm = (currency) => ({
@@ -52,14 +81,13 @@ const emptyForm = (currency) => ({
   note: '',
 });
 
-function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
+function TradesPanel({ symbol, quote, trades, loading, refetch }) {
   const { showSnackbar } = useSnackbar();
   const {
     accounts,
     activeAccount,
     setActiveAccount,
     createAccount,
-    deleteAccount,
   } = useAccounts();
 
   // Default the trade currency from the symbol's exchange, else USD.
@@ -69,8 +97,8 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Account management UI
-  const [showNewAccount, setShowNewAccount] = useState(false);
+  // First-account creation (empty state only). Managing accounts — creating
+  // more, renaming, deleting — lives on the Portfolio / Account Details pages.
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState('TFSA');
 
@@ -90,15 +118,33 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
     return [...set];
   }, [defaultCurrency]);
 
-  // Unrealized P&L from the live quote, since the page already holds it.
-  const unrealized = useMemo(() => {
-    if (!holding) return null;
-    const qty = parseFloat(holding.quantity);
-    const avg = parseFloat(holding.avg_cost);
-    const last = parseFloat(quote?.last_price);
-    if (!qty || !Number.isFinite(avg) || !Number.isFinite(last)) return null;
-    return (last - avg) * qty;
-  }, [holding, quote]);
+  // Current position for this symbol in the active account, priced server-side
+  // (same source as the Portfolio pages). accountTotal backs the allocation %.
+  // Separate from useTrades' `holding` because this row also needs live price,
+  // market value, and the account total — so it's reloaded after every mutation.
+  const [position, setPosition] = useState(null);
+  const [accountTotal, setAccountTotal] = useState(0);
+  const [expandedId, setExpandedId] = useState(null);
+
+  const loadPosition = useCallback(async () => {
+    if (!activeAccount?.id) {
+      setPosition(null);
+      setAccountTotal(0);
+      return;
+    }
+    try {
+      const data = await fetchAccountDetails(activeAccount.id);
+      setAccountTotal(data.summary?.value ?? 0);
+      setPosition(data.holdings?.find((h) => h.symbol === symbol) ?? null);
+    } catch {
+      setPosition(null);
+      setAccountTotal(0);
+    }
+  }, [activeAccount?.id, symbol]);
+
+  useEffect(() => {
+    loadPosition();
+  }, [loadPosition]);
 
   const setField = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -116,23 +162,12 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
 
   async function handleCreateAccount(e) {
     e.preventDefault();
-    const name = newName.trim();
-    if (!name) {
-      showSnackbar({ message: 'Give the account a name', variant: 'error' });
-      return;
-    }
-    const created = await createAccount({ name, type: newType });
+    // Nickname is optional; the account falls back to its type for display.
+    const created = await createAccount({ name: newName.trim(), type: newType });
     if (created) {
       setNewName('');
       setNewType('TFSA');
-      setShowNewAccount(false);
     }
-  }
-
-  async function handleDeleteAccount() {
-    if (!activeAccount) return;
-    if (!window.confirm(`Delete "${activeAccount.name}" and all its trades?`)) return;
-    await deleteAccount(activeAccount.id);
   }
 
   async function handleSubmit(e) {
@@ -172,6 +207,7 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
       }
       resetForm();
       await refetch();
+      loadPosition();
     } catch (err) {
       showSnackbar({ message: err.message || 'Could not save trade', variant: 'error' });
     } finally {
@@ -185,22 +221,43 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
       if (editingId === id) resetForm();
       showSnackbar({ message: 'Trade deleted', variant: 'success' });
       await refetch();
+      loadPosition();
     } catch (err) {
       showSnackbar({ message: err.message || 'Could not delete trade', variant: 'error' });
     }
   }
 
-  const hasPosition = holding && parseFloat(holding.quantity) !== 0;
-  const posCurrency = holding?.currency || form.currency;
+  const hasPosition = position && parseFloat(position.quantity) !== 0;
+  const allocation =
+    hasPosition && accountTotal && position.market_value != null
+      ? (position.market_value / accountTotal) * 100
+      : null;
 
-  // New-account form, shared by the empty state and the "+ New" toggle.
+  // Trades are oldest-first; show newest-first, grouped by calendar day.
+  const activityGroups = useMemo(() => {
+    const groups = [];
+    const byDay = new Map();
+    for (const t of [...trades].reverse()) {
+      const day = t.traded_at.split('T')[0];
+      if (!byDay.has(day)) {
+        const group = { day, items: [] };
+        byDay.set(day, group);
+        groups.push(group);
+      }
+      byDay.get(day).items.push(t);
+    }
+    return groups;
+  }, [trades]);
+
+  // First-account form for the empty state, so a brand-new user can create one
+  // account inline and start recording trades without leaving the symbol page.
   const newAccountForm = (
     <form className="trades-panel__account-form" onSubmit={handleCreateAccount}>
       <input
         type="text"
         value={newName}
         onChange={(e) => setNewName(e.target.value)}
-        placeholder="Account name (e.g. My TFSA)"
+        placeholder="Nickname (optional)"
         maxLength={60}
         autoFocus
       />
@@ -211,15 +268,6 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
       </select>
       <div className="trades-panel__actions">
         <button type="submit" className="trades-panel__submit">Create account</button>
-        {accounts.length > 0 && (
-          <button
-            type="button"
-            className="trades-panel__cancel"
-            onClick={() => setShowNewAccount(false)}
-          >
-            Cancel
-          </button>
-        )}
       </div>
     </form>
   );
@@ -238,16 +286,10 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
           >
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}{a.type ? ` · ${a.type}` : ''}
+                {accountLabel(a)}{a.name && a.type ? ` · ${a.type}` : ''}
               </option>
             ))}
           </select>
-        )}
-        {accounts.length > 0 && (
-          <div className="trades-panel__account-actions">
-            <button type="button" onClick={() => setShowNewAccount((s) => !s)}>+ New</button>
-            <button type="button" onClick={handleDeleteAccount}>Delete</button>
-          </div>
         )}
       </div>
 
@@ -258,35 +300,58 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
         </div>
       ) : (
         <>
-          {showNewAccount && newAccountForm}
 
-          {/* Position summary */}
-          <div className="trades-panel__position">
-            <div className="trades-panel__pos-cell">
-              <span className="trades-panel__pos-label">Shares</span>
-              <span className="trades-panel__pos-value">
-                {hasPosition ? qtyLabel(holding.quantity) : '—'}
-              </span>
+          {/* Current position — only shown when there's an open position */}
+          {hasPosition && (
+            <div className="trades-position">
+              <span className="trades-position__title">Position</span>
+              <div className="trades-position__table-wrap">
+                <table className="trades-position__table">
+                  <thead>
+                    <tr>
+                      <th>Position</th>
+                      <th>Account</th>
+                      <th className="num">Allocation</th>
+                      <th className="num">Qty</th>
+                      <th className="num">Avg price</th>
+                      <th className="num">Total value</th>
+                      <th className="num">All-time return</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="trades-position__shares">{qtyLabel(position.quantity)} shares</td>
+                      <td>
+                        <span className="trades-position__account">{accountLabel(activeAccount)}</span>
+                      </td>
+                      <td className="num">{allocation != null ? `${allocation.toFixed(2)}%` : '—'}</td>
+                      <td className="num">{qtyLabel(position.quantity)}</td>
+                      <td className="num">{dollar(position.avg_cost)}</td>
+                      <td className="num trades-position__strong">
+                        {position.market_value != null ? dollar(position.market_value) : '—'}
+                      </td>
+                      <td className="num">
+                        {position.return_abs != null ? (
+                          <div className="trades-position__return">
+                            <span className={`trades-position__return-abs ${pnlClass(position.return_abs)}`}>
+                              {signedDollar(position.return_abs)}
+                            </span>
+                            {position.return_pct != null && (
+                              <span className={`trades-position__badge ${pnlClass(position.return_abs)}`}>
+                                {Math.abs(position.return_pct).toFixed(2)}%
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="trades-panel__pos-cell">
-              <span className="trades-panel__pos-label">Avg Cost</span>
-              <span className="trades-panel__pos-value">
-                {hasPosition ? money(holding.avg_cost, posCurrency) : '—'}
-              </span>
-            </div>
-            <div className="trades-panel__pos-cell">
-              <span className="trades-panel__pos-label">Unrealized</span>
-              <span className={`trades-panel__pos-value ${unrealized != null ? pnlClass(unrealized) : ''}`}>
-                {unrealized != null ? signedMoney(unrealized, posCurrency) : '—'}
-              </span>
-            </div>
-            <div className="trades-panel__pos-cell">
-              <span className="trades-panel__pos-label">Realized</span>
-              <span className={`trades-panel__pos-value ${holding ? pnlClass(holding.realized_pnl) : ''}`}>
-                {holding ? signedMoney(holding.realized_pnl, posCurrency) : signedMoney(0, posCurrency)}
-              </span>
-            </div>
-          </div>
+          )}
 
           {/* Add / edit form */}
           <form className="trades-panel__form" onSubmit={handleSubmit}>
@@ -345,36 +410,89 @@ function TradesPanel({ symbol, quote, trades, holding, loading, refetch }) {
             </div>
           </form>
 
-          {/* Trade history */}
-          <div className="trades-panel__list">
+          {/* Recent activity */}
+          <div className="trades-activity">
+            <span className="trades-activity__title">Recent activity</span>
             {loading && trades.length === 0 ? (
-              <p className="trades-panel__empty">Loading trades…</p>
+              <p className="trades-panel__empty">Loading activity…</p>
             ) : trades.length === 0 ? (
-              <p className="trades-panel__empty">No trades yet for {symbol} in this account.</p>
+              <p className="trades-panel__empty">No activity yet for {symbol} in this account.</p>
             ) : (
-              trades
-                .slice()
-                .reverse()
-                .map((t) => (
-                  <div key={t.id} className="trades-panel__row">
-                    <span className={`trades-panel__badge trades-panel__badge--${t.side}`}>
-                      {t.side === 'buy' ? 'B' : 'S'}
-                    </span>
-                    <div className="trades-panel__row-main">
-                      <span className="trades-panel__row-line">
-                        {qtyLabel(t.quantity)} @ {money(t.price, t.currency)}
-                      </span>
-                      <span className="trades-panel__row-date">
-                        {t.traded_at.split('T')[0]}
-                        {t.note ? ` · ${t.note}` : ''}
-                      </span>
-                    </div>
-                    <div className="trades-panel__row-actions">
-                      <button type="button" onClick={() => startEdit(t)}>Edit</button>
-                      <button type="button" onClick={() => handleDelete(t.id)}>Delete</button>
-                    </div>
-                  </div>
-                ))
+              activityGroups.map((group) => (
+                <div key={group.day} className="trades-activity__group">
+                  <span className="trades-activity__date">{dateHeading(group.day)}</span>
+                  {group.items.map((t) => {
+                    const open = expandedId === t.id;
+                    const amount = Number(t.quantity) * Number(t.price);
+                    return (
+                      <div key={t.id} className="trades-activity__item">
+                        <button
+                          type="button"
+                          className="trades-activity__head"
+                          onClick={() => setExpandedId(open ? null : t.id)}
+                          aria-expanded={open}
+                        >
+                          <span className={`trades-activity__icon trades-activity__icon--${t.side}`}>
+                            {symbol.replace('AV:', '').slice(0, 2)}
+                          </span>
+                          <div className="trades-activity__main">
+                            <span className="trades-activity__symbol">{symbol}</span>
+                            <span className="trades-activity__sub">
+                              {sideLabel(t.side)} · {accountLabel(activeAccount)} · {qtyLabel(t.quantity)} shares
+                            </span>
+                          </div>
+                          <div className="trades-activity__right">
+                            <span className="trades-activity__amount">
+                              {dollarAmount(amount, t.currency)}
+                            </span>
+                            <ChevronDown
+                              size={16}
+                              className={`trades-activity__chevron${open ? ' is-open' : ''}`}
+                            />
+                          </div>
+                        </button>
+                        {open && (
+                          <div className="trades-activity__detail">
+                            <div className="trades-activity__detail-grid">
+                              <div>
+                                <span>Shares</span>
+                                <span>{qtyLabel(t.quantity)}</span>
+                              </div>
+                              <div>
+                                <span>Price</span>
+                                <span>{dollar(t.price)} {t.currency}</span>
+                              </div>
+                              <div>
+                                <span>Amount</span>
+                                <span>{dollarAmount(amount, t.currency)}</span>
+                              </div>
+                              <div>
+                                <span>Date</span>
+                                <span>{t.traded_at.split('T')[0]}</span>
+                              </div>
+                            </div>
+                            {t.note && <p className="trades-activity__note">{t.note}</p>}
+                            <div className="trades-activity__actions">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  startEdit(t);
+                                  setExpandedId(null);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button type="button" onClick={() => handleDelete(t.id)}>
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
             )}
           </div>
         </>

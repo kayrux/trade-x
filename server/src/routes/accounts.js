@@ -35,21 +35,29 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /accounts — { name, type? }
+// POST /accounts — { name?, type? }
+// The nickname (name) is optional; the UI falls back to the type when it's blank.
+// At least one of name / type must be provided so the account has a label.
 router.post('/', requireAuth, async (req, res) => {
-  const name = String(req.body.name || '').trim();
-  if (!name) return res.status(400).json({ error: 'name is required' });
-  if (name.length > MAX_NAME_LENGTH) {
+  const rawName = req.body.name == null ? '' : String(req.body.name).trim();
+  if (rawName.length > MAX_NAME_LENGTH) {
     return res.status(400).json({ error: `name must be ${MAX_NAME_LENGTH} characters or fewer` });
   }
-  const type = cleanType(req.body.type);
-  if (type && type.error) return res.status(400).json({ error: type.error });
+  const name = rawName || null;
+
+  const typeResult = cleanType(req.body.type);
+  if (typeResult && typeResult.error) return res.status(400).json({ error: typeResult.error });
+  const type = typeResult ? typeResult.value : null;
+
+  if (!name && !type) {
+    return res.status(400).json({ error: 'Give the account a nickname or a type' });
+  }
 
   try {
     const { rows } = await pool.query(
       `INSERT INTO accounts (user_id, name, type) VALUES ($1, $2, $3)
        RETURNING id, name, type, created_at`,
-      [req.user.id, name, type ? type.value : null],
+      [req.user.id, name, type],
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -61,34 +69,45 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// PATCH /accounts/:id — rename and/or retype
+// PATCH /accounts/:id — rename and/or retype. The nickname is optional and can
+// be cleared (name: "" or null); an account must still keep a nickname or a type.
 router.patch('/:id', requireAuth, async (req, res) => {
   const sets = [];
   const params = [];
 
+  let nextName; // undefined = leave as-is
   if (req.body.name !== undefined) {
-    const name = String(req.body.name || '').trim();
-    if (!name) return res.status(400).json({ error: 'name cannot be blank' });
-    if (name.length > MAX_NAME_LENGTH) {
+    const rawName = req.body.name == null ? '' : String(req.body.name).trim();
+    if (rawName.length > MAX_NAME_LENGTH) {
       return res.status(400).json({ error: `name must be ${MAX_NAME_LENGTH} characters or fewer` });
     }
-    params.push(name);
+    nextName = rawName || null;
+    params.push(nextName);
     sets.push(`name = $${params.length}`);
   }
 
+  let nextType; // undefined = leave as-is
   if (req.body.type !== undefined) {
     const type = cleanType(req.body.type);
     if (type && type.error) return res.status(400).json({ error: type.error });
-    params.push(type ? type.value : null);
+    nextType = type ? type.value : null;
+    params.push(nextType);
     sets.push(`type = $${params.length}`);
   }
 
   if (sets.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
   try {
-    if (!(await findOwnedAccount(req.user.id, req.params.id))) {
-      return res.status(404).json({ error: 'Account not found' });
+    const existing = await findOwnedAccount(req.user.id, req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Account not found' });
+
+    // Enforce "nickname or type" against the merged result, not just the payload.
+    const mergedName = nextName !== undefined ? nextName : existing.name;
+    const mergedType = nextType !== undefined ? nextType : existing.type;
+    if (!mergedName && !mergedType) {
+      return res.status(400).json({ error: 'Give the account a nickname or a type' });
     }
+
     params.push(req.params.id, req.user.id);
     const { rows } = await pool.query(
       `UPDATE accounts SET ${sets.join(', ')}

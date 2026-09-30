@@ -1,17 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ChevronRight, Landmark, Wallet } from 'lucide-react';
+import { Eye, EyeOff, ChevronRight, Landmark, Wallet, Plus } from 'lucide-react';
 import PageLayout from '../../components/layouts/PageLayout/PageLayout';
 import ValueChart from '../../components/ui/ValueChart/ValueChart';
 import ResolutionSwitcher from '../../components/ui/ResolutionSwitcher/ResolutionSwitcher';
+import AccountModal from '../../components/ui/AccountModal/AccountModal';
 import { fetchPortfolioSummary, fetchPortfolioHistory } from '../../lib/api/portfolio';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { accountLabel } from '../../context/AccountContext';
 import {
   RANGES,
   rangeSubtitle,
   formatMoney,
   formatSignedMoney,
   formatPercent,
+  adjustedSeries,
   seriesChange,
   changeClass,
 } from './portfolioFormat';
@@ -29,21 +32,24 @@ function Portfolio() {
   const [historyLoading, setHistoryLoading] = useState(true);
 
   const [hidden, setHidden] = useState(false);
+  const [showNewAccount, setShowNewAccount] = useState(false);
 
   const reportError = useCallback(
     (err) => showSnackbar({ message: err?.message || 'Something went wrong', variant: 'error' }),
     [showSnackbar],
   );
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadSummary = useCallback(() => {
     setSummaryLoading(true);
-    fetchPortfolioSummary()
-      .then((data) => !cancelled && setSummary(data))
-      .catch((err) => !cancelled && reportError(err))
-      .finally(() => !cancelled && setSummaryLoading(false));
-    return () => { cancelled = true; };
+    return fetchPortfolioSummary()
+      .then((data) => setSummary(data))
+      .catch((err) => reportError(err))
+      .finally(() => setSummaryLoading(false));
   }, [reportError]);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,11 +67,23 @@ function Portfolio() {
 
   const accounts = summary?.accounts ?? [];
   const totalValue = summary?.total_value ?? 0;
-  const change = seriesChange(series);
+  // Deposit-adjusted: contributions are treated as capital present from the
+  // start, so a buy isn't read as a gain. The line still ends at current value.
+  const chartSeries = useMemo(() => adjustedSeries(series), [series]);
+  const change = seriesChange(chartSeries);
   const secret = (node) => (hidden ? '••••••' : node);
 
   return (
     <PageLayout>
+      {showNewAccount && (
+        <AccountModal
+          onCancel={() => setShowNewAccount(false)}
+          onSaved={() => {
+            setShowNewAccount(false);
+            loadSummary();
+          }}
+        />
+      )}
       <div className="portfolio">
         <header className="portfolio__header">
           <div className="portfolio__value-row">
@@ -91,14 +109,26 @@ function Portfolio() {
         </header>
 
         <section className="portfolio__chart-card">
-          <ValueChart series={series} loading={historyLoading} />
+          <ValueChart series={chartSeries} loading={historyLoading} />
           <div className="portfolio__ranges">
             <ResolutionSwitcher resolution={range} onChange={setRange} options={RANGES} />
           </div>
         </section>
 
         <section className="portfolio__accounts">
-          <h2 className="portfolio__section-title">Investing</h2>
+          <div className="portfolio__section-header">
+            <h2 className="portfolio__section-title">Investing</h2>
+            {!summaryLoading && accounts.length > 0 && (
+              <button
+                type="button"
+                className="portfolio__new-account"
+                onClick={() => setShowNewAccount(true)}
+              >
+                <Plus size={16} />
+                <span>New account</span>
+              </button>
+            )}
+          </div>
 
           {summaryLoading ? (
             <div className="portfolio__account-row portfolio__account-row--skeleton" aria-hidden="true">
@@ -108,7 +138,15 @@ function Portfolio() {
             <div className="portfolio__empty">
               <Wallet size={28} />
               <p>No investment accounts yet.</p>
-              <span>Open a symbol and record a trade to start an account.</span>
+              <span>Create an account (TFSA, RRSP, …) to start tracking your holdings.</span>
+              <button
+                type="button"
+                className="portfolio__new-account portfolio__new-account--empty"
+                onClick={() => setShowNewAccount(true)}
+              >
+                <Plus size={16} />
+                <span>New account</span>
+              </button>
             </div>
           ) : (
             accounts.map((a) => (
@@ -122,8 +160,8 @@ function Portfolio() {
                   <Landmark size={18} />
                 </span>
                 <div className="portfolio__account-name">
-                  <span className="portfolio__account-title">{a.name}</span>
-                  {a.type && <span className="portfolio__account-type">{a.type}</span>}
+                  <span className="portfolio__account-title">{accountLabel(a)}</span>
+                  {a.name && a.type && <span className="portfolio__account-type">{a.type}</span>}
                 </div>
                 <div className="portfolio__account-figures">
                   <span className="portfolio__account-value">

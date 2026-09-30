@@ -107,6 +107,18 @@ create/rename/delete/reorder in `ui/ManageWatchlistsModal` and add/remove via `u
 - API modules use bare `fetch`, throw on `!res.ok`, and surface the server's `error` field.
 - There is no `types/` directory. This is JavaScript, not TypeScript.
 
+## Comments
+
+Applies to all code — client, server, Python, and SQL.
+
+- Default to no comment. Self-explanatory code gets none: don't restate what a name, a
+  signature, or an obvious line already says.
+- Comment only what the code can't say itself — a non-obvious *why*, an external constraint
+  (rate limits, provider quirks), or a workaround that looks wrong without the reason.
+- Keep them to one line where possible. No block headers, no section banners, no JSDoc
+  unless the shape is genuinely unclear from the code.
+- Delete stale comments as you change code; a wrong comment is worse than none.
+
 ## Database
 
 Full DDL lives in `PLAN.md`. Two points that aren't obvious from the schema:

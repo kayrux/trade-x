@@ -15,6 +15,13 @@ const ACTIVE_KEY = 'trade-x-active-account';
 
 const AccountContext = createContext(null);
 
+// Display label for an account. The nickname is optional, so fall back to the
+// type (e.g. "TFSA") and finally to a generic label when neither is set.
+export function accountLabel(account) {
+  if (!account) return 'Account';
+  return account.name?.trim() || account.type || 'Account';
+}
+
 function loadActiveId() {
   try {
     return localStorage.getItem(ACTIVE_KEY);

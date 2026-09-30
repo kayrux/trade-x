@@ -215,8 +215,37 @@ async function computeSeries(accountId, spine) {
   return values;
 }
 
+// Cumulative net contributions (money put in) at each of the given ascending
+// dates: buys add their cost, sells subtract their proceeds. Purely from trades
+// — no market prices — so this is what was deposited/withdrawn, not what it grew
+// to. The chart subtracts this so a buy reads as a deposit, not a gain.
+async function investedForDates(accountId, dates) {
+  const invested = new Map();
+  if (!dates.length) return invested;
+
+  const { rows } = await pool.query(
+    `SELECT side, quantity, price, (traded_at AT TIME ZONE 'UTC')::date::text AS d
+       FROM trades WHERE account_id = $1
+      ORDER BY traded_at, created_at`,
+    [accountId],
+  );
+
+  let cum = 0;
+  let i = 0;
+  for (const date of dates) {
+    while (i < rows.length && rows[i].d <= date) {
+      const amount = Number(rows[i].quantity) * Number(rows[i].price);
+      cum += rows[i].side === 'buy' ? amount : -amount;
+      i += 1;
+    }
+    invested.set(date, cum);
+  }
+  return invested;
+}
+
 // One account's value series for a range: cached past days (filling any gaps),
-// plus a live "today" point. Returns [{ date, value }] ascending.
+// plus a live "today" point. Returns [{ date, value, invested }] ascending,
+// where `invested` is cumulative net contributions to that day (see above).
 async function accountSeries(accountId, range) {
   const today = dayUTC();
   const rangeFrom = rangeStart(range);
@@ -281,7 +310,9 @@ async function accountSeries(accountId, range) {
     series.push({ date: today, value });
   }
 
-  return series;
+  // Attach cumulative net contributions to each point.
+  const invested = await investedForDates(accountId, series.map((p) => p.date));
+  return series.map((p) => ({ ...p, invested: invested.get(p.date) ?? 0 }));
 }
 
 // Combined series across several accounts, summed per date. Each account is
@@ -294,20 +325,22 @@ async function combinedSeries(accountIds, range) {
   for (const s of perAccount) for (const p of s) dates.add(p.date);
   const sorted = [...dates].sort();
 
-  const maps = perAccount.map((s) => new Map(s.map((p) => [p.date, p.value])));
+  const maps = perAccount.map((s) => new Map(s.map((p) => [p.date, p])));
   const last = new Array(perAccount.length).fill(null);
 
   return sorted.map((date) => {
-    let total = 0;
+    let value = 0;
+    let invested = 0;
     let any = false;
     for (let i = 0; i < maps.length; i += 1) {
       if (maps[i].has(date)) last[i] = maps[i].get(date);
       if (last[i] != null) {
-        total += last[i];
+        value += last[i].value;
+        invested += last[i].invested;
         any = true;
       }
     }
-    return { date, value: any ? total : 0 };
+    return { date, value: any ? value : 0, invested: any ? invested : 0 };
   });
 }
 

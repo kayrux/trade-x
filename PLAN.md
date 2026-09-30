@@ -438,9 +438,11 @@ sell depends on) is rejected `400` and rolled back.
 | DELETE | `/trades/:id` | required | → `204`. Deleting a buy that a later sell needs → `400` |
 | GET | `/holdings?account_id=…` | required | → `[{ symbol, quantity, avg_cost, realized_pnl, currency, updated_at }]`. `?all=1` includes flat (closed) positions |
 | GET | `/portfolio/summary` | required | → `{ total_value, cost_basis, return_abs, return_pct, accounts: [{ id, name, type, value, cost_basis, return_abs, return_pct }] }`. Positions priced at the current market |
-| GET | `/portfolio/history?range=ytd` | required | → `{ range, series: [{ date, value }] }` summed across all the user's accounts. `range` ∈ `1w`\|`1m`\|`3m`\|`6m`\|`ytd`\|`1y`\|`all` |
+| GET | `/portfolio/history?range=ytd` | required | → `{ range, series: [{ date, value, invested }] }` summed across all the user's accounts. `range` ∈ `1w`\|`1m`\|`3m`\|`6m`\|`ytd`\|`1y`\|`all` |
 | GET | `/portfolio/accounts/:id` | required | → `{ account, summary, holdings: [{ symbol, name, currency, quantity, avg_cost, price, market_value, cost_value, realized_pnl, return_abs, return_pct }] }`. Foreign/missing → `404` |
-| GET | `/portfolio/accounts/:id/history?range=ytd` | required | → `{ range, series: [{ date, value }] }` for one account |
+| GET | `/portfolio/accounts/:id/history?range=ytd` | required | → `{ range, series: [{ date, value, invested }] }` for one account |
+
+> **`invested` is cumulative net contributions** to that day (Σ buy cost − Σ sell proceeds), from trades only. The client rebases the chart to `value + (investedLast − invested)` so a deposit (a buy) is treated as capital present from the start rather than a gain — otherwise a fresh buy would step the line up and read as a huge return. The rebased line still ends at the real current value.
 
 ---
 
